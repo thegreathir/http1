@@ -12,12 +12,11 @@ namespace http1 {
 
 class TcpServer {
  public:
-  using ReplyStream = std::ostream;
-
   TcpServer(std::uint16_t port);
   void Start();
 
  protected:
+  using ReplyStream = std::ostream;
   virtual void OnData(const std::string& data, ReplyStream&& reply_stream) = 0;
 
  private:
