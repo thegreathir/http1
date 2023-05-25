@@ -37,7 +37,11 @@ jobs:
         clang-tidy --warnings-as-errors="*" --checks="-*,
         bugprone-*, cert-*, clang-analyzer-*, concurrency-*, cppcoreguidelines-*,
         google-*, hicpp-*, llvm-*, misc-*, modernize-*, performance-*,
-        portability-*, readability-*"
+        portability-*, readability-*,
+        -modernize-use-trailing-return-type,
+        -cppcoreguidelines-pro-type-vararg,
+        -hicpp-vararg,
+        -bugprone-easily-swappable-parameters"
         --header-filter="include\/http1\/.*\.hpp"
         -p ${{github.workspace}}/build
         src/*.cpp

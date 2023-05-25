@@ -4,7 +4,7 @@
 
 class EchoTcpServer : public http1::TcpServer {
  public:
-  EchoTcpServer(std::uint16_t port) : TcpServer(port) {}
+  explicit EchoTcpServer(std::uint16_t port) : TcpServer(port) {}
 
  private:
   void OnData(const std::string& data, ReplyStream&& reply) override {
@@ -15,7 +15,8 @@ class EchoTcpServer : public http1::TcpServer {
 };
 
 int main() {
-  auto server = EchoTcpServer(8000);
+  constexpr std::uint16_t DEFAULT_PORT = 8000;
+  auto server = EchoTcpServer(DEFAULT_PORT);
   server.Start();
   return 0;
 }

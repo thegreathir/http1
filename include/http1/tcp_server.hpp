@@ -13,14 +13,21 @@ namespace http1 {
 
 class TcpServer {
  public:
-  TcpServer(std::uint16_t port);
+  explicit TcpServer(std::uint16_t port);
   virtual ~TcpServer();
+
+  TcpServer(const TcpServer& other) = delete;
+  TcpServer(TcpServer&& other) = delete;
+
+  TcpServer& operator=(const TcpServer& other) = delete;
+  TcpServer& operator=(TcpServer&& other) = delete;
+
   void Start();
 
  private:
   class ReplyStreamBuffer : public std::streambuf {
    public:
-    ReplyStreamBuffer(int socket_fd);
+    explicit ReplyStreamBuffer(int socket_fd);
 
    private:
     std::streamsize xsputn(const char* data,
@@ -46,10 +53,10 @@ class TcpServer {
 
  private:
   static void SetNonBlocking(int socket_fd);
-  void AddEvent(int socket_fd, std::uint32_t event_flags);
+  void AddEvent(int socket_fd, std::uint32_t event_flags) const;
   void AcceptNewClient();
   bool ReceiveData(int socket_fd);
-  void CloseSocket(int socket_fd);
+  void CloseSocket(int socket_fd) const;
   void AddToCloseQueue(int socket_fd);
   void ConsumeCloseQueue();
 
@@ -60,7 +67,7 @@ class TcpServer {
   int server_fd_ = -1;
   int epoll_fd_ = -1;
 
-  std::array<std::byte, BUFFER_SIZE> receive_buffer;
+  std::array<std::byte, BUFFER_SIZE> receive_buffer = {};
   std::queue<int> close_queue;
 };
 
