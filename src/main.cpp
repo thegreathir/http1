@@ -7,10 +7,8 @@ class SampleTcpServer : public http1::TcpServer {
   SampleTcpServer(std::uint16_t port) : TcpServer(port) {}
 
  private:
-  void OnData(const ConstWeakBuffer& buffer) override {
-    std::cout << std::string(reinterpret_cast<const char*>(buffer.data),
-                             buffer.data_size)
-              << std::endl;
+  void OnData(const std::string& data) override {
+    std::cout << data << std::endl;
   }
 };
 

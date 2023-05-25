@@ -4,21 +4,17 @@
 #include <array>
 #include <cstddef>
 #include <cstdint>
+#include <string>
 
 namespace http1 {
 
 class TcpServer {
  public:
-  struct ConstWeakBuffer {
-    const std::byte* data;
-    std::size_t data_size;
-  };
-
   TcpServer(std::uint16_t port);
   void Start();
 
  protected:
-  virtual void OnData(const ConstWeakBuffer& buffer) = 0;
+  virtual void OnData(const std::string& data) = 0;
 
  private:
   static void SetNonBlocking(int socket_fd);

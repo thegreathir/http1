@@ -91,7 +91,7 @@ bool TcpServer::ReceiveData(int socket_fd) {
     return false;
   }
 
-  OnData({.data = receive_buffer.data(),
-          .data_size = static_cast<std::size_t>(return_value)});
+  OnData(std::string(reinterpret_cast<const char*>(receive_buffer.data()),
+                     static_cast<std::size_t>(return_value)));
   return true;
 }
