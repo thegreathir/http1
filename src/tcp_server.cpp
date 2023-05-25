@@ -88,7 +88,7 @@ void TcpServer::Start() {
 
 void TcpServer::SetNonBlocking(int socket_fd) {
   const int DEFAULT_FLAGS =
-      wrap_syscall(fcntl(socket_fd, F_GETFL, 0), "Can not get socket options");
+      wrap_syscall(fcntl(socket_fd, F_GETFL, 0), "Can not get socket flags");
 
   // NOLINTNEXTLINE(hicpp-signed-bitwise)
   wrap_syscall(fcntl(socket_fd, F_SETFL, DEFAULT_FLAGS | O_NONBLOCK),
