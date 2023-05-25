@@ -4,6 +4,7 @@
 #include <netinet/in.h>
 #include <sys/epoll.h>
 #include <sys/socket.h>
+#include <unistd.h>
 
 #include <array>
 
@@ -22,6 +23,11 @@ std::streamsize TcpServer::ReplyStreamBuffer::xsputn(
 }
 
 TcpServer::TcpServer(std::uint16_t port) : port_(port) {}
+
+TcpServer::~TcpServer() {
+  close(epoll_fd_);
+  close(server_fd_);
+}
 
 void TcpServer::Start() {
   server_fd_ = wrap_syscall(socket(AF_INET, SOCK_STREAM, 0),
@@ -51,8 +57,9 @@ void TcpServer::Start() {
   constexpr int MAX_EPOLL_EVENTS = 64;
   std::array<epoll_event, MAX_EPOLL_EVENTS> epoll_event_list;
   while (true) {
-    const int number_of_fds =
-        epoll_wait(epoll_fd_, epoll_event_list.data(), MAX_EPOLL_EVENTS, -1);
+    const int number_of_fds = wrap_syscall(
+        epoll_wait(epoll_fd_, epoll_event_list.data(), MAX_EPOLL_EVENTS, -1),
+        "Error occurred while waiting for new events");
     for (int fd_iterator = 0; fd_iterator < number_of_fds; ++fd_iterator) {
       auto& current_event = epoll_event_list[fd_iterator];
       if (current_event.data.fd == server_fd_) {
@@ -60,6 +67,14 @@ void TcpServer::Start() {
       } else if (current_event.events & EPOLLIN) {
         while (ReceiveData(current_event.data.fd)) {
         }
+      }
+
+      if (current_event.events & EPOLLHUP ||
+          current_event.events & EPOLLRDHUP) {
+        wrap_syscall(
+            epoll_ctl(epoll_fd_, EPOLL_CTL_DEL, current_event.data.fd, nullptr),
+            "Can not remove event from epoll");
+        wrap_syscall(close(current_event.data.fd), "Can not close socket");
       }
     }
   }

@@ -13,6 +13,7 @@ namespace http1 {
 class TcpServer {
  public:
   TcpServer(std::uint16_t port);
+  virtual ~TcpServer();
   void Start();
 
  protected:
