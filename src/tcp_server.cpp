@@ -22,6 +22,12 @@ std::streamsize TcpServer::ReplyStreamBuffer::xsputn(
                    "Error occurred while sending data"));
 }
 
+TcpServer::ReplyStream::ReplyStream(ReplyStreamBuffer* stream_buffer,
+                                    TcpServer* server, int socket_fd)
+    : std::ostream(stream_buffer), server_(server), socket_fd_(socket_fd) {}
+
+void TcpServer::ReplyStream::Close() { server_->AddToCloseQueue(socket_fd_); }
+
 TcpServer::TcpServer(std::uint16_t port) : port_(port) {}
 
 TcpServer::~TcpServer() {
@@ -71,12 +77,11 @@ void TcpServer::Start() {
 
       if (current_event.events & EPOLLHUP ||
           current_event.events & EPOLLRDHUP) {
-        wrap_syscall(
-            epoll_ctl(epoll_fd_, EPOLL_CTL_DEL, current_event.data.fd, nullptr),
-            "Can not remove event from epoll");
-        wrap_syscall(close(current_event.data.fd), "Can not close socket");
+        AddToCloseQueue(current_event.data.fd);
       }
     }
+
+    ConsumeCloseQueue();
   }
 }
 
@@ -119,6 +124,20 @@ bool TcpServer::ReceiveData(int socket_fd) {
   ReplyStreamBuffer stream_buffer(socket_fd);
   OnData(std::string(reinterpret_cast<const char*>(receive_buffer.data()),
                      static_cast<std::size_t>(return_value)),
-         ReplyStream(&stream_buffer));
+         ReplyStream(&stream_buffer, this, socket_fd));
   return true;
+}
+
+void TcpServer::CloseSocket(int socket_fd) {
+  epoll_ctl(epoll_fd_, EPOLL_CTL_DEL, socket_fd, nullptr);
+  close(socket_fd);
+}
+
+void TcpServer::AddToCloseQueue(int socket_fd) { close_queue.push(socket_fd); }
+
+void TcpServer::ConsumeCloseQueue() {
+  while (!close_queue.empty()) {
+    CloseSocket(close_queue.front());
+    close_queue.pop();
+  }
 }

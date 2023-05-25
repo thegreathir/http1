@@ -10,6 +10,7 @@ class EchoTcpServer : public http1::TcpServer {
   void OnData(const std::string& data, ReplyStream&& reply) override {
     std::cout << data << std::endl;
     reply << data << std::endl;
+    reply.Close();
   }
 };
 

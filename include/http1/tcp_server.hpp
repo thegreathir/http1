@@ -5,6 +5,7 @@
 #include <cstddef>
 #include <cstdint>
 #include <ostream>
+#include <queue>
 #include <streambuf>
 #include <string>
 
@@ -15,10 +16,6 @@ class TcpServer {
   TcpServer(std::uint16_t port);
   virtual ~TcpServer();
   void Start();
-
- protected:
-  using ReplyStream = std::ostream;
-  virtual void OnData(const std::string& data, ReplyStream&& reply_stream) = 0;
 
  private:
   class ReplyStreamBuffer : public std::streambuf {
@@ -31,10 +28,30 @@ class TcpServer {
     int socket_fd_;
   };
 
+ protected:
+  class ReplyStream : public std::ostream {
+    friend TcpServer;
+
+   public:
+    void Close();
+
+   private:
+    ReplyStream(ReplyStreamBuffer* stream_buffer, TcpServer* server,
+                int socket_fd);
+    TcpServer* server_;
+    int socket_fd_;
+  };
+
+  virtual void OnData(const std::string& data, ReplyStream&& reply_stream) = 0;
+
+ private:
   static void SetNonBlocking(int socket_fd);
   void AddEvent(int socket_fd, std::uint32_t event_flags);
   void AcceptNewClient();
   bool ReceiveData(int socket_fd);
+  void CloseSocket(int socket_fd);
+  void AddToCloseQueue(int socket_fd);
+  void ConsumeCloseQueue();
 
   static constexpr std::size_t BUFFER_SIZE = 2048;
 
@@ -44,6 +61,7 @@ class TcpServer {
   int epoll_fd_ = -1;
 
   std::array<std::byte, BUFFER_SIZE> receive_buffer;
+  std::queue<int> close_queue;
 };
 
 }  // namespace http1
