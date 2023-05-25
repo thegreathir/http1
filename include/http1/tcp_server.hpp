@@ -4,19 +4,33 @@
 #include <array>
 #include <cstddef>
 #include <cstdint>
+#include <ostream>
+#include <streambuf>
 #include <string>
 
 namespace http1 {
 
 class TcpServer {
  public:
+  using ReplyStream = std::ostream;
+
   TcpServer(std::uint16_t port);
   void Start();
 
  protected:
-  virtual void OnData(const std::string& data) = 0;
+  virtual void OnData(const std::string& data, ReplyStream&& reply_stream) = 0;
 
  private:
+  class ReplyStreamBuffer : public std::streambuf {
+   public:
+    ReplyStreamBuffer(int socket_fd);
+
+   private:
+    std::streamsize xsputn(const char* data,
+                           std::streamsize data_size) override;
+    int socket_fd_;
+  };
+
   static void SetNonBlocking(int socket_fd);
   void AddEvent(int socket_fd, std::uint32_t event_flags);
   void AcceptNewClient();

@@ -11,6 +11,16 @@
 
 using http1::TcpServer;
 
+TcpServer::ReplyStreamBuffer::ReplyStreamBuffer(int socket_fd)
+    : socket_fd_(socket_fd) {}
+
+std::streamsize TcpServer::ReplyStreamBuffer::xsputn(
+    const char* data, std::streamsize data_size) {
+  return static_cast<std::streamsize>(
+      wrap_syscall(send(socket_fd_, data, data_size, 0),
+                   "Error occurred while sending data"));
+}
+
 TcpServer::TcpServer(std::uint16_t port) : port_(port) {}
 
 void TcpServer::Start() {
@@ -91,7 +101,9 @@ bool TcpServer::ReceiveData(int socket_fd) {
     return false;
   }
 
+  ReplyStreamBuffer stream_buffer(socket_fd);
   OnData(std::string(reinterpret_cast<const char*>(receive_buffer.data()),
-                     static_cast<std::size_t>(return_value)));
+                     static_cast<std::size_t>(return_value)),
+         ReplyStream(&stream_buffer));
   return true;
 }
