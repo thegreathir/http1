@@ -7,10 +7,8 @@ class EchoTcpServer : public http1::TcpServer {
   explicit EchoTcpServer(std::uint16_t port) : TcpServer(port) {}
 
  private:
-  void OnData(const std::string& data, ReplyStream&& reply) override {
-    std::cout << data << std::endl;
-    reply << data << std::endl;
-    reply.Close();
+  void OnData(const Socket& socket, const ByteArrayView& data) override {
+    socket.Write(ByteArray(data.data(), data.size()));
   }
 };
 
