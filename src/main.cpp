@@ -1,6 +1,7 @@
 #include <iostream>
 
 #include "tcp_server.hpp"
+#include "http_server.hpp"
 
 class EchoTcpServer : public http1::TcpServer {
  public:
@@ -14,7 +15,7 @@ class EchoTcpServer : public http1::TcpServer {
 
 int main() {
   constexpr std::uint16_t DEFAULT_PORT = 8000;
-  auto server = EchoTcpServer(DEFAULT_PORT);
+  auto server = http1::HttpServer(DEFAULT_PORT);
   server.Start();
   return 0;
 }

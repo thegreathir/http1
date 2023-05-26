@@ -16,6 +16,9 @@ namespace http1 {
 
 class TcpServer {
  public:
+  using ByteArray = std::basic_string<std::byte>;
+  using ByteArrayView = std::basic_string_view<std::byte>;
+
   explicit TcpServer(std::uint16_t port);
   virtual ~TcpServer();
 
@@ -28,9 +31,6 @@ class TcpServer {
   void Start();
 
  protected:
-  using ByteArray = std::basic_string<std::byte>;
-  using ByteArrayView = std::basic_string_view<std::byte>;
-
   using CallBack = std::function<void()>;
 
   class Socket {
