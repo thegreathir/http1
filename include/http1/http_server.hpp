@@ -99,12 +99,12 @@ enum class HttpStatusCode {
 
 class HttpParseError : public std::invalid_argument {
  public:
-  HttpParseError(const std::string& error_message);
+  explicit HttpParseError(const std::string& error_message);
 };
 
 class HttpSerializeError : public std::invalid_argument {
  public:
-  HttpSerializeError(const std::string& error_message);
+  explicit HttpSerializeError(const std::string& error_message);
 };
 
 struct HeaderField {
@@ -131,11 +131,10 @@ class HttpRequest : public HttpMessage {
 
  public:
   static HttpRequest Parse(const TcpServer::ByteArrayView& data);
-  HttpRequest(HttpMethod method, const std::string& path,
-              const std::string& version);
+  HttpRequest(HttpMethod method, std::string path, std::string version);
 
-  HttpMethod GetMethod() const noexcept;
-  const std::string& GetPath() const noexcept;
+  [[nodiscard]] HttpMethod GetMethod() const noexcept;
+  [[nodiscard]] const std::string& GetPath() const noexcept;
 
  private:
   HttpMethod method_;
@@ -149,7 +148,7 @@ class HttpResponse : public HttpMessage {
 
   void SetReason(const std::string& reason);
 
-  TcpServer::ByteArray Serialize() const;
+  [[nodiscard]] TcpServer::ByteArray Serialize() const;
 
  private:
   static constexpr const char* VERSION = "HTTP/1.1";

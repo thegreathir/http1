@@ -15,9 +15,9 @@ using http1::TcpServer;
 TcpServer::Socket::Socket(int socket_fd, TcpServer& server)
     : socket_fd_(socket_fd), server_(server) {}
 
-bool TcpServer::Socket::Write(const ByteArrayView& data,
+void TcpServer::Socket::Write(const ByteArrayView& data,
                               const std::optional<CallBack>& callback) const {
-  return server_.TryWrite(socket_fd_, data, callback);
+  server_.TryWrite(socket_fd_, data, callback);
 }
 
 void TcpServer::Socket::Close() const { server_.AddToCloseQueue(socket_fd_); }
@@ -105,7 +105,7 @@ void TcpServer::AddEvent(int socket_fd, std::uint32_t event_flags,
 }
 
 bool TcpServer::AcceptNewClient() {
-  int new_client_fd = accept(server_fd_, nullptr, nullptr);
+  const int new_client_fd = accept(server_fd_, nullptr, nullptr);
 
   if (new_client_fd < 0) {
     if (errno != EAGAIN && errno != EWOULDBLOCK) {
@@ -155,7 +155,7 @@ void TcpServer::ConsumeCloseQueue() {
   }
 }
 
-bool TcpServer::TryWrite(int socket_fd, const ByteArrayView& data,
+void TcpServer::TryWrite(int socket_fd, const ByteArrayView& data,
                          const std::optional<CallBack>& callback) {
   const auto return_value = send(socket_fd, data.data(), data.size(), 0);
 
@@ -164,23 +164,23 @@ bool TcpServer::TryWrite(int socket_fd, const ByteArrayView& data,
     if (callback) {
       callback.value()();
     }
-    return true;
+    return;
   }
 
   if (return_value < 0 && errno != EAGAIN && errno != EWOULDBLOCK) {
     wrap_syscall(return_value, "Write error");
-    return false;
+    return;
   }
 
   write_task_table[socket_fd].push(WriteTask{
       .data = ByteArray(data),
       .written_size =
           (return_value > 0) ? static_cast<std::size_t>(return_value) : 0,
-      .callback = std::move(callback)});
+      .callback = callback});
 
   // Add write mask
   AddEvent(socket_fd, EPOLLIN | EPOLLET | EPOLLRDHUP | EPOLLOUT, true);
-  return false;
+  return;
 }
 
 void TcpServer::ContinueWrite(int socket_fd) {

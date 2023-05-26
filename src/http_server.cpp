@@ -2,6 +2,7 @@
 
 #include <iostream>
 #include <sstream>
+#include <utility>
 
 using http1::HeaderField;
 using http1::HttpMessage;
@@ -17,25 +18,32 @@ using http1::TcpServer;
 HttpMethod ParseMethod(const std::string_view& method) {
   if (method == "GET") {
     return HttpMethod::Get;
-  } else if (method == "HEAD") {
-    return HttpMethod::Head;
-  } else if (method == "POST") {
-    return HttpMethod::Post;
-  } else if (method == "PUT") {
-    return HttpMethod::Put;
-  } else if (method == "DELETE") {
-    return HttpMethod::Delete;
-  } else if (method == "CONNECT") {
-    return HttpMethod::Connect;
-  } else if (method == "OPTIONS") {
-    return HttpMethod::Options;
-  } else if (method == "TRACE") {
-    return HttpMethod::Trace;
-  } else if (method == "PATCH") {
-    return HttpMethod::Patch;
-  } else {
-    throw HttpParseError("Invalid HTTP method");
   }
+  if (method == "HEAD") {
+    return HttpMethod::Head;
+  }
+  if (method == "POST") {
+    return HttpMethod::Post;
+  }
+  if (method == "PUT") {
+    return HttpMethod::Put;
+  }
+  if (method == "DELETE") {
+    return HttpMethod::Delete;
+  }
+  if (method == "CONNECT") {
+    return HttpMethod::Connect;
+  }
+  if (method == "OPTIONS") {
+    return HttpMethod::Options;
+  }
+  if (method == "TRACE") {
+    return HttpMethod::Trace;
+  }
+  if (method == "PATCH") {
+    return HttpMethod::Patch;
+  }
+  throw HttpParseError("Invalid HTTP method");
 }
 
 std::string SerializeMethod(HttpMethod method) {
@@ -70,20 +78,20 @@ HttpSerializeError::HttpSerializeError(const std::string& error_message)
     : std::invalid_argument(error_message) {}
 
 HeaderField HeaderField::Parse(const std::string_view& data) {
-  std::size_t name_end = data.find(':');
+  const std::size_t name_end = data.find(':');
   if (name_end == std::string::npos) {
     throw HttpParseError("Invalid header field");
   }
 
   std::string name = std::string(data.substr(0, name_end));
-  std::string value = std::string(data.substr(name_end + 1));
+  const std::string value = std::string(data.substr(name_end + 1));
 
   std::transform(name.begin(), name.end(), name.begin(),
                  [](unsigned char ch) { return std::tolower(ch); });
 
   auto trim = [](const std::string& input) -> std::string {
-    std::size_t first = input.find_first_not_of(" \t");
-    std::size_t last = input.find_last_not_of(" \t");
+    const std::size_t first = input.find_first_not_of(" \t");
+    const std::size_t last = input.find_last_not_of(" \t");
 
     if (first == std::string::npos || last == std::string::npos) {
       return "";
@@ -107,31 +115,31 @@ HttpRequest HttpRequest::Parse(const TcpServer::ByteArrayView& data) {
   constexpr std::array<std::byte, 4> header_separator = {
       std::byte{13}, std::byte{10}, std::byte{13}, std::byte{10}};
 
-  std::size_t header_end =
+  const std::size_t header_end =
       data.find(header_separator.data(), 0, header_separator.size());
   if (header_end == TcpServer::ByteArrayView::npos) {
     throw HttpParseError("Can not find end of header");
   }
 
-  std::string_view header{reinterpret_cast<const char*>(data.data()),
-                          header_end};
+  const std::string_view header{reinterpret_cast<const char*>(data.data()),
+                                header_end};
 
-  std::size_t request_line_end = header.find("\r\n");
+  const std::size_t request_line_end = header.find("\r\n");
   if (request_line_end == std::string::npos) {
     throw HttpParseError("Can not parse request line");
   }
 
-  std::size_t method_end = header.find(' ');
+  const std::size_t method_end = header.find(' ');
   if (method_end == std::string::npos) {
     throw HttpParseError("Can not parse method from request line");
   }
 
-  std::size_t path_end = header.find(' ', method_end + 1);
+  const std::size_t path_end = header.find(' ', method_end + 1);
   if (path_end == std::string::npos) {
     throw HttpParseError("Can not parse path from request line");
   }
 
-  std::size_t version_end = header.find("\r\n", path_end + 1);
+  const std::size_t version_end = header.find("\r\n", path_end + 1);
   if (version_end == std::string::npos) {
     throw HttpParseError("Can not parse version from request line");
   }
@@ -144,7 +152,7 @@ HttpRequest HttpRequest::Parse(const TcpServer::ByteArrayView& data) {
 
   std::size_t field_start = request_line_end + 2;
   while (field_start < header_end) {
-    std::size_t field_end = header.find("\r\n", field_start);
+    const std::size_t field_end = header.find("\r\n", field_start);
     if (field_end == std::string::npos) {
       result.AddField(HeaderField::Parse(header.substr(field_start)));
       break;
@@ -161,9 +169,9 @@ HttpRequest HttpRequest::Parse(const TcpServer::ByteArrayView& data) {
   return result;
 }
 
-HttpRequest::HttpRequest(HttpMethod method, const std::string& path,
-                         const std::string& version)
-    : method_(method), path_(path), version_(version) {}
+HttpRequest::HttpRequest(HttpMethod method, std::string path,
+                         std::string version)
+    : method_(method), path_(std::move(path)), version_(std::move(version)) {}
 
 HttpMethod HttpRequest::GetMethod() const noexcept { return method_; }
 
@@ -217,7 +225,7 @@ HttpServer::HttpServer(std::uint16_t port) : TcpServer(port){};
 
 void HttpServer::OnData(const Socket& socket, const ByteArrayView& data) {
   try {
-    // TODO: Close if 'keep-alive' is not exist in request header
+    // TODO(hir): Close if 'keep-alive' is not exist in request header
     socket.Write(OnRequest(HttpRequest::Parse(data)).Serialize());
     return;
   } catch (const HttpParseError& parse_error) {

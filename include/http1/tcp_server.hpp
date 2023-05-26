@@ -37,7 +37,7 @@ class TcpServer {
     friend TcpServer;
 
    public:
-    bool Write(const ByteArrayView& data,
+    void Write(const ByteArrayView& data,
                const std::optional<CallBack>& callback = std::nullopt) const;
     void Close() const;
 
@@ -65,7 +65,7 @@ class TcpServer {
   void CloseSocket(int socket_fd);
   void AddToCloseQueue(int socket_fd);
   void ConsumeCloseQueue();
-  bool TryWrite(int socket_fd, const ByteArrayView& data,
+  void TryWrite(int socket_fd, const ByteArrayView& data,
                 const std::optional<CallBack>& callback = std::nullopt);
 
   void ContinueWrite(int socket_fd);

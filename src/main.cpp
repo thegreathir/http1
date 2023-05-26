@@ -13,14 +13,14 @@ class ExampleHttpServer : public http1::HttpServer {
   }
 
  private:
-  ByteArray open_file(const std::string& path) {
+  static ByteArray open_file(const std::string& path) {
     std::ifstream file(path, std::ios::binary);
     if (!file) {
       throw std::invalid_argument("Can not open file: " + path);
     }
 
     file.seekg(0, std::ios::end);
-    std::size_t size = file.tellg();
+    const std::size_t size = file.tellg();
 
     file.seekg(0, std::ios::beg);
 
