@@ -12,46 +12,46 @@ using http1::TcpServer;
 
 HttpMethod ParseMethod(const std::string& method) {
   if (method == "GET")
-    return HttpMethod::GET;
+    return HttpMethod::Get;
   else if (method == "HEAD")
-    return HttpMethod::HEAD;
+    return HttpMethod::Head;
   else if (method == "POST")
-    return HttpMethod::POST;
+    return HttpMethod::Post;
   else if (method == "PUT")
-    return HttpMethod::PUT;
+    return HttpMethod::Put;
   else if (method == "DELETE")
-    return HttpMethod::DELETE;
+    return HttpMethod::Delete;
   else if (method == "CONNECT")
-    return HttpMethod::CONNECT;
+    return HttpMethod::Connect;
   else if (method == "OPTIONS")
-    return HttpMethod::OPTIONS;
+    return HttpMethod::Options;
   else if (method == "TRACE")
-    return HttpMethod::TRACE;
+    return HttpMethod::Trace;
   else if (method == "PATCH")
-    return HttpMethod::PATCH;
+    return HttpMethod::Patch;
   else
     throw HttpParseError("Invalid HTTP method: " + method);
 }
 
 std::string SerializeMethod(HttpMethod method) {
   switch (method) {
-    case HttpMethod::GET:
+    case HttpMethod::Get:
       return "GET";
-    case HttpMethod::HEAD:
+    case HttpMethod::Head:
       return "HEAD";
-    case HttpMethod::POST:
+    case HttpMethod::Post:
       return "POST";
-    case HttpMethod::PUT:
+    case HttpMethod::Put:
       return "PUT";
-    case HttpMethod::DELETE:
+    case HttpMethod::Delete:
       return "DELETE";
-    case HttpMethod::CONNECT:
+    case HttpMethod::Connect:
       return "CONNECT";
-    case HttpMethod::OPTIONS:
+    case HttpMethod::Options:
       return "OPTIONS";
-    case HttpMethod::TRACE:
+    case HttpMethod::Trace:
       return "TRACE";
-    case HttpMethod::PATCH:
+    case HttpMethod::Patch:
       return "PATCH";
     default:
       throw HttpSerializeError("Invalid HTTP method");

@@ -12,15 +12,15 @@
 namespace http1 {
 
 enum class HttpMethod {
-  GET,
-  HEAD,
-  POST,
-  PUT,
-  DELETE,
-  CONNECT,
-  OPTIONS,
-  TRACE,
-  PATCH
+  Get,
+  Head,
+  Post,
+  Put,
+  Delete,
+  Connect,
+  Options,
+  Trace,
+  Patch
 };
 
 class HttpParseError : std::invalid_argument {
