@@ -82,14 +82,14 @@ HeaderField HeaderField::Parse(const std::string_view& data) {
     throw HttpParseError("Invalid header field");
   }
 
-  std::string name = std::string(data.substr(0, name_end));
-  const std::string value = std::string(data.substr(name_end + 1));
+  auto name = std::string(data.substr(0, name_end));
+  const auto value = data.substr(name_end + 1);
 
   std::transform(
       name.begin(), name.end(), name.begin(),
       [](unsigned char character) { return std::tolower(character); });
 
-  auto trim = [](const std::string& input) -> std::string {
+  auto trim = [](const std::string_view& input) -> std::string_view {
     const std::size_t first = input.find_first_not_of(" \t");
     const std::size_t last = input.find_last_not_of(" \t");
 
@@ -100,7 +100,7 @@ HeaderField HeaderField::Parse(const std::string_view& data) {
     return input.substr(first, last - first + 1);
   };
 
-  return HeaderField{.name = name, .value = trim(value)};
+  return HeaderField{.name = name, .value = std::string(trim(value))};
 }
 
 void HttpMessage::AddField(const HeaderField& field) {
@@ -125,22 +125,22 @@ HttpRequest HttpRequest::Parse(const TcpServer::ByteArrayView& data) {
                                 header_end};
 
   const std::size_t request_line_end = header.find("\r\n");
-  if (request_line_end == std::string::npos) {
+  if (request_line_end == std::string_view::npos) {
     throw HttpParseError("Can not parse request line");
   }
 
   const std::size_t method_end = header.find(' ');
-  if (method_end == std::string::npos) {
+  if (method_end == std::string_view::npos) {
     throw HttpParseError("Can not parse method from request line");
   }
 
   const std::size_t path_end = header.find(' ', method_end + 1);
-  if (path_end == std::string::npos) {
+  if (path_end == std::string_view::npos) {
     throw HttpParseError("Can not parse path from request line");
   }
 
   const std::size_t version_end = header.find("\r\n", path_end + 1);
-  if (version_end == std::string::npos) {
+  if (version_end == std::string_view::npos) {
     throw HttpParseError("Can not parse version from request line");
   }
 
@@ -153,7 +153,7 @@ HttpRequest HttpRequest::Parse(const TcpServer::ByteArrayView& data) {
   std::size_t field_start = request_line_end + 2;
   while (field_start < header_end) {
     const std::size_t field_end = header.find("\r\n", field_start);
-    if (field_end == std::string::npos) {
+    if (field_end == std::string_view::npos) {
       result.AddField(HeaderField::Parse(header.substr(field_start)));
       break;
     }
@@ -223,7 +223,7 @@ HttpServer::HttpServer(std::uint16_t port) : TcpServer(port){};
 
 void HttpServer::OnData(const Socket& socket, const ByteArrayView& data) {
   try {
-    // TODO(hir): Close if 'keep-alive' is not exist in request header
+    // TODO: Close if 'keep-alive' is not exist in request header
     socket.Write(OnRequest(HttpRequest::Parse(data)).Serialize());
     return;
   } catch (const HttpParseError& parse_error) {
