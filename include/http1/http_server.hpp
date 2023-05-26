@@ -160,6 +160,9 @@ class HttpServer : public TcpServer {
  public:
   explicit HttpServer(std::uint16_t port);
 
+protected:
+  virtual HttpResponse OnRequest(const HttpRequest& request) = 0;
+
  private:
   void OnData(const Socket& socket, const ByteArrayView& data) override;
 };

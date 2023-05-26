@@ -161,6 +161,10 @@ HttpRequest::HttpRequest(HttpMethod method, const std::string& path,
                          const std::string& version)
     : method_(method), path_(path), version_(version) {}
 
+HttpMethod HttpRequest::GetMethod() const noexcept { return method_; }
+
+const std::string& HttpRequest::GetPath() const noexcept { return path_; }
+
 std::ostream& http1::operator<<(std::ostream& os, const HttpRequest& request) {
   os << "Method: \"" << SerializeMethod(request.method_) << "\", "
      << "Path: \"" << request.path_ << "\", "
@@ -195,8 +199,9 @@ TcpServer::ByteArray HttpResponse::Serialize() const {
   header << "\r\n";
 
   const auto header_string = header.str();
-  TcpServer::ByteArray result{reinterpret_cast<const std::byte*>(header_string.data()),
-                              header_string.size()};
+  TcpServer::ByteArray result{
+      reinterpret_cast<const std::byte*>(header_string.data()),
+      header_string.size()};
   if (body_) {
     result.append(body_.value());
   }
@@ -207,11 +212,9 @@ TcpServer::ByteArray HttpResponse::Serialize() const {
 HttpServer::HttpServer(std::uint16_t port) : TcpServer(port){};
 
 void HttpServer::OnData(const Socket& socket, const ByteArrayView& data) {
-  auto request = HttpRequest::Parse(data);
-  std::cout << request << std::endl;
+  auto req = HttpRequest::Parse(data);
 
-  HttpResponse res(HttpStatusCode::OK);
-  socket.Write(res.Serialize(), [socket]() {
-    socket.Close();
-  });
+  auto res = OnRequest(req);
+
+  socket.Write(res.Serialize(), [socket]() { socket.Close(); });
 }

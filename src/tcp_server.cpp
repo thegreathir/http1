@@ -53,7 +53,7 @@ void TcpServer::Start() {
 
   epoll_fd_ = wrap_syscall(epoll_create(1), "Can create epoll");
 
-  AddEvent(server_fd_, EPOLLIN | EPOLLOUT | EPOLLET);
+  AddEvent(server_fd_, EPOLLIN | EPOLLOUT);
 
   constexpr int MAX_EPOLL_EVENTS = 64;
   std::array<epoll_event, MAX_EPOLL_EVENTS> epoll_event_list{};
