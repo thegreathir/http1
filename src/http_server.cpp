@@ -1,13 +1,17 @@
 #include "http_server.hpp"
 
 #include <iostream>
+#include <sstream>
 
 using http1::HeaderField;
+using http1::HttpMessage;
 using http1::HttpMethod;
 using http1::HttpParseError;
 using http1::HttpRequest;
+using http1::HttpResponse;
 using http1::HttpSerializeError;
 using http1::HttpServer;
+using http1::HttpStatusCode;
 using http1::TcpServer;
 
 HttpMethod ParseMethod(const std::string& method) {
@@ -90,11 +94,11 @@ HeaderField HeaderField::Parse(const std::string& data) {
   return HeaderField{.name = name, .value = trim(value)};
 }
 
-void HttpRequest::add_field(const HeaderField& field) {
+void HttpMessage::AddField(const HeaderField& field) {
   header_fields_.push_back(field);
 }
 
-void HttpRequest::set_body(const TcpServer::ByteArray& body) { body_ = body; }
+void HttpMessage::SetBody(const TcpServer::ByteArray& body) { body_ = body; }
 
 HttpRequest HttpRequest::Parse(const TcpServer::ByteArrayView& data) {
   constexpr std::array<std::byte, 4> header_separator = {
@@ -137,17 +141,17 @@ HttpRequest HttpRequest::Parse(const TcpServer::ByteArrayView& data) {
   while (field_start < header_end) {
     std::size_t field_end = header.find("\r\n", field_start);
     if (field_end == std::string::npos) {
-      result.add_field(HeaderField::Parse(header.substr(field_start)));
+      result.AddField(HeaderField::Parse(header.substr(field_start)));
       break;
     }
-    result.add_field(HeaderField::Parse(
+    result.AddField(HeaderField::Parse(
         header.substr(field_start, field_end - field_start)));
     field_start = field_end + 2;
   }
 
   if (header_end + header_separator.size() < data.size()) {
     auto body_view = data.substr(header_end + header_separator.size());
-    result.set_body(TcpServer::ByteArray(body_view.data(), body_view.size()));
+    result.SetBody(TcpServer::ByteArray(body_view.data(), body_view.size()));
   }
 
   return result;
@@ -170,11 +174,44 @@ std::ostream& http1::operator<<(std::ostream& os, const HttpRequest& request) {
   return os;
 }
 
+void HttpResponse::SetReason(const std::string& reason) { reason_ = reason; }
+
+HttpResponse::HttpResponse(HttpStatusCode status_code)
+    : status_code_(status_code) {}
+
+TcpServer::ByteArray HttpResponse::Serialize() const {
+  std::stringstream header;
+  header << VERSION << " " << static_cast<int>(status_code_) << " ";
+  if (reason_) {
+    header << reason_.value();
+  }
+
+  header << "\r\n";
+
+  for (const auto& field : header_fields_) {
+    header << field.name << ": " << field.value << "\r\n";
+  }
+
+  header << "\r\n";
+
+  const auto header_string = header.str();
+  TcpServer::ByteArray result{reinterpret_cast<const std::byte*>(header_string.data()),
+                              header_string.size()};
+  if (body_) {
+    result.append(body_.value());
+  }
+
+  return result;
+}
+
 HttpServer::HttpServer(std::uint16_t port) : TcpServer(port){};
 
 void HttpServer::OnData(const Socket& socket, const ByteArrayView& data) {
   auto request = HttpRequest::Parse(data);
-
   std::cout << request << std::endl;
-  socket.Close();
+
+  HttpResponse res(HttpStatusCode::OK);
+  socket.Write(res.Serialize(), [socket]() {
+    socket.Close();
+  });
 }

@@ -115,7 +115,17 @@ struct HeaderField {
 
 using HeaderFields = std::vector<HeaderField>;
 
-class HttpRequest {
+class HttpMessage {
+ public:
+  void AddField(const HeaderField& field);
+  void SetBody(const TcpServer::ByteArray& body);
+
+ protected:
+  HeaderFields header_fields_;
+  std::optional<TcpServer::ByteArray> body_;
+};
+
+class HttpRequest : public HttpMessage {
   friend std::ostream& operator<<(std::ostream& os, const HttpRequest& request);
 
  public:
@@ -123,16 +133,25 @@ class HttpRequest {
   HttpRequest(HttpMethod method, const std::string& path,
               const std::string& version);
 
-  void add_field(const HeaderField& field);
-  void set_body(const TcpServer::ByteArray& body);
-
  private:
   HttpMethod method_;
   std::string path_;
   std::string version_;
+};
 
-  HeaderFields header_fields_;
-  std::optional<TcpServer::ByteArray> body_;
+class HttpResponse : public HttpMessage {
+ public:
+  explicit HttpResponse(HttpStatusCode status_code);
+
+  void SetReason(const std::string& reason);
+
+  TcpServer::ByteArray Serialize() const;
+
+ private:
+  static constexpr const char* VERSION = "HTTP/1.1";
+
+  HttpStatusCode status_code_;
+  std::optional<std::string> reason_;
 };
 
 std::ostream& operator<<(std::ostream& os, const HttpRequest& request);
