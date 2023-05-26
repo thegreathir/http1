@@ -12,15 +12,15 @@
 
 using http1::TcpServer;
 
-TcpServer::Socket::Socket(int socket_fd, TcpServer* server)
+TcpServer::Socket::Socket(int socket_fd, TcpServer& server)
     : socket_fd_(socket_fd), server_(server) {}
 
-bool TcpServer::Socket::Write(const ByteArray& data,
-                              std::optional<CallBack> callback) const {
-  return server_->TryWrite(socket_fd_, data, callback);
+bool TcpServer::Socket::Write(const ByteArrayView& data,
+                              const std::optional<CallBack>& callback) const {
+  return server_.TryWrite(socket_fd_, data, callback);
 }
 
-void TcpServer::Socket::Close() const { server_->AddToCloseQueue(socket_fd_); }
+void TcpServer::Socket::Close() const { server_.AddToCloseQueue(socket_fd_); }
 
 TcpServer::TcpServer(std::uint16_t port) : port_(port) {}
 
@@ -53,7 +53,7 @@ void TcpServer::Start() {
 
   epoll_fd_ = wrap_syscall(epoll_create(1), "Can create epoll");
 
-  AddEvent(server_fd_, EPOLLIN | EPOLLOUT);
+  AddEvent(server_fd_, EPOLLIN | EPOLLOUT | EPOLLET);
 
   constexpr int MAX_EPOLL_EVENTS = 64;
   std::array<epoll_event, MAX_EPOLL_EVENTS> epoll_event_list{};
@@ -64,7 +64,8 @@ void TcpServer::Start() {
     for (int fd_iterator = 0; fd_iterator < number_of_fds; ++fd_iterator) {
       auto& current_event = epoll_event_list.at(fd_iterator);
       if (current_event.data.fd == server_fd_) {
-        AcceptNewClient();
+        while (AcceptNewClient()) {
+        }
       } else {
         if ((current_event.events & EPOLLIN) != 0U) {
           while (ReceiveData(current_event.data.fd)) {
@@ -103,12 +104,19 @@ void TcpServer::AddEvent(int socket_fd, std::uint32_t event_flags,
                "Can not add/update socket event");
 }
 
-void TcpServer::AcceptNewClient() {
-  const int new_client_fd = wrap_syscall(accept(server_fd_, nullptr, nullptr),
-                                         "Can not accept new connection");
+bool TcpServer::AcceptNewClient() {
+  int new_client_fd = accept(server_fd_, nullptr, nullptr);
+
+  if (new_client_fd < 0) {
+    if (errno != EAGAIN && errno != EWOULDBLOCK) {
+      wrap_syscall(new_client_fd, "Can not accept new connection");
+    }
+    return false;
+  }
 
   SetNonBlocking(new_client_fd);
   AddEvent(new_client_fd, EPOLLIN | EPOLLET | EPOLLRDHUP);
+  return true;
 }
 
 bool TcpServer::ReceiveData(int socket_fd) {
@@ -119,13 +127,13 @@ bool TcpServer::ReceiveData(int socket_fd) {
   }
 
   if (return_value < 0) {
-    if (errno != EAGAIN) {
+    if (errno != EAGAIN && errno != EWOULDBLOCK) {
       wrap_syscall(return_value, "Read error");
     }
     return false;
   }
 
-  OnData(Socket(socket_fd, this),
+  OnData(Socket(socket_fd, *this),
          ByteArrayView(receive_buffer.data(),
                        static_cast<std::size_t>(return_value)));
 
@@ -147,8 +155,8 @@ void TcpServer::ConsumeCloseQueue() {
   }
 }
 
-bool TcpServer::TryWrite(int socket_fd, const ByteArray& data,
-                         std::optional<CallBack> callback) {
+bool TcpServer::TryWrite(int socket_fd, const ByteArrayView& data,
+                         const std::optional<CallBack>& callback) {
   const auto return_value = send(socket_fd, data.data(), data.size(), 0);
 
   if (return_value >= 0 &&
@@ -165,7 +173,7 @@ bool TcpServer::TryWrite(int socket_fd, const ByteArray& data,
   }
 
   write_task_table[socket_fd].push(WriteTask{
-      .data = std::move(data),
+      .data = ByteArray(data),
       .written_size =
           (return_value > 0) ? static_cast<std::size_t>(return_value) : 0,
       .callback = std::move(callback)});

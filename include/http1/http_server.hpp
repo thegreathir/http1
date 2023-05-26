@@ -5,6 +5,7 @@
 #include <optional>
 #include <stdexcept>
 #include <string>
+#include <string_view>
 #include <unordered_map>
 
 #include "tcp_server.hpp"
@@ -96,12 +97,12 @@ enum class HttpStatusCode {
   NetworkAuthenticationRequired = 511
 };
 
-class HttpParseError : std::invalid_argument {
+class HttpParseError : public std::invalid_argument {
  public:
   HttpParseError(const std::string& error_message);
 };
 
-class HttpSerializeError : std::invalid_argument {
+class HttpSerializeError : public std::invalid_argument {
  public:
   HttpSerializeError(const std::string& error_message);
 };
@@ -110,7 +111,7 @@ struct HeaderField {
   std::string name;
   std::string value;
 
-  static HeaderField Parse(const std::string& data);
+  static HeaderField Parse(const std::string_view& data);
 };
 
 using HeaderFields = std::vector<HeaderField>;
