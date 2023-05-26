@@ -133,6 +133,9 @@ class HttpRequest : public HttpMessage {
   HttpRequest(HttpMethod method, const std::string& path,
               const std::string& version);
 
+  HttpMethod GetMethod() const noexcept;
+  const std::string& GetPath() const noexcept;
+
  private:
   HttpMethod method_;
   std::string path_;
@@ -160,7 +163,7 @@ class HttpServer : public TcpServer {
  public:
   explicit HttpServer(std::uint16_t port);
 
-protected:
+ protected:
   virtual HttpResponse OnRequest(const HttpRequest& request) = 0;
 
  private:
