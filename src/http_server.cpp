@@ -12,7 +12,6 @@ using http1::HttpRequest;
 using http1::HttpResponse;
 using http1::HttpSerializeError;
 using http1::HttpServer;
-using http1::HttpStatusCode;
 using http1::TcpServer;
 
 HttpMethod ParseMethod(const std::string_view& method) {
@@ -86,8 +85,9 @@ HeaderField HeaderField::Parse(const std::string_view& data) {
   std::string name = std::string(data.substr(0, name_end));
   const std::string value = std::string(data.substr(name_end + 1));
 
-  std::transform(name.begin(), name.end(), name.begin(),
-                 [](unsigned char ch) { return std::tolower(ch); });
+  std::transform(
+      name.begin(), name.end(), name.begin(),
+      [](unsigned char character) { return std::tolower(character); });
 
   auto trim = [](const std::string& input) -> std::string {
     const std::size_t first = input.find_first_not_of(" \t");
@@ -173,21 +173,19 @@ HttpRequest::HttpRequest(HttpMethod method, std::string path,
                          std::string version)
     : method_(method), path_(std::move(path)), version_(std::move(version)) {}
 
-HttpMethod HttpRequest::GetMethod() const noexcept { return method_; }
+std::ostream& http1::operator<<(std::ostream& output_stream,
+                                const HttpRequest& request) {
+  output_stream << "Method: \"" << SerializeMethod(request.method()) << "\", "
+                << "Path: \"" << request.path() << "\", "
+                << "Version: \"" << request.version() << "\"" << std::endl;
 
-const std::string& HttpRequest::GetPath() const noexcept { return path_; }
-
-std::ostream& http1::operator<<(std::ostream& os, const HttpRequest& request) {
-  os << "Method: \"" << SerializeMethod(request.method_) << "\", "
-     << "Path: \"" << request.path_ << "\", "
-     << "Version: \"" << request.version_ << "\"" << std::endl;
-
-  os << "Fields:" << std::endl;
-  for (const auto& field : request.header_fields_) {
-    os << "{\"" << field.name << "\", \"" << field.value << "\"}" << std::endl;
+  output_stream << "Fields:" << std::endl;
+  for (const auto& field : request.header_fields()) {
+    output_stream << "{\"" << field.name << "\", \"" << field.value << "\"}"
+                  << std::endl;
   }
 
-  return os;
+  return output_stream;
 }
 
 void HttpResponse::SetReason(const std::string& reason) { reason_ = reason; }
@@ -204,7 +202,7 @@ TcpServer::ByteArray HttpResponse::Serialize() const {
 
   header << "\r\n";
 
-  for (const auto& field : header_fields_) {
+  for (const auto& field : header_fields()) {
     header << field.name << ": " << field.value << "\r\n";
   }
 
@@ -214,8 +212,8 @@ TcpServer::ByteArray HttpResponse::Serialize() const {
   TcpServer::ByteArray result{
       reinterpret_cast<const std::byte*>(header_string.data()),
       header_string.size()};
-  if (body_) {
-    result.append(body_.value());
+  if (body()) {
+    result.append(body().value());
   }
 
   return result;

@@ -60,6 +60,7 @@ class TcpServer {
   static void SetNonBlocking(int socket_fd);
   void AddEvent(int socket_fd, std::uint32_t event_flags,
                 bool update = false) const;
+  void LoopEvents();
   bool AcceptNewClient();
   bool ReceiveData(int socket_fd);
   void CloseSocket(int socket_fd);

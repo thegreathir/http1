@@ -121,20 +121,34 @@ class HttpMessage {
   void AddField(const HeaderField& field);
   void SetBody(const TcpServer::ByteArrayView& body);
 
- protected:
+  [[nodiscard]] inline const HeaderFields& header_fields() const noexcept {
+    return header_fields_;
+  }
+
+  [[nodiscard]] inline const std::optional<TcpServer::ByteArrayView>& body()
+      const noexcept {
+    return body_;
+  }
+
+ private:
   HeaderFields header_fields_;
   std::optional<TcpServer::ByteArrayView> body_;
 };
 
 class HttpRequest : public HttpMessage {
-  friend std::ostream& operator<<(std::ostream& os, const HttpRequest& request);
-
  public:
   static HttpRequest Parse(const TcpServer::ByteArrayView& data);
   HttpRequest(HttpMethod method, std::string path, std::string version);
 
-  [[nodiscard]] HttpMethod GetMethod() const noexcept;
-  [[nodiscard]] const std::string& GetPath() const noexcept;
+  [[nodiscard]] inline HttpMethod method() const noexcept { return method_; }
+
+  [[nodiscard]] inline const std::string& path() const noexcept {
+    return path_;
+  }
+
+  [[nodiscard]] inline const std::string& version() const noexcept {
+    return version_;
+  }
 
  private:
   HttpMethod method_;
@@ -157,7 +171,7 @@ class HttpResponse : public HttpMessage {
   std::optional<std::string> reason_;
 };
 
-std::ostream& operator<<(std::ostream& os, const HttpRequest& request);
+std::ostream& operator<<(std::ostream& output_stream, const HttpRequest& request);
 
 class HttpServer : public TcpServer {
  public:

@@ -34,13 +34,13 @@ class ExampleHttpServer : public http1::HttpServer {
 
   http1::HttpResponse OnRequest(const http1::HttpRequest& req) override {
     http1::HttpResponse res(http1::HttpStatusCode::OK);
-    if (req.GetPath() == "/") {
+    if (req.path() == "/") {
       res.SetBody(index);
       res.AddField(http1::HeaderField{.name = "content-length",
                                       .value = std::to_string(index.size())});
       res.AddField(http1::HeaderField{.name = "content-type",
                                       .value = "text/html; charset=UTF-8"});
-    } else if (req.GetPath() == "/bg.jpg") {
+    } else if (req.path() == "/bg.jpg") {
       res.SetBody(background);
       res.AddField(
           http1::HeaderField{.name = "content-length",

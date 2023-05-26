@@ -55,6 +55,10 @@ void TcpServer::Start() {
 
   AddEvent(server_fd_, EPOLLIN | EPOLLOUT | EPOLLET);
 
+  LoopEvents();
+}
+
+void TcpServer::LoopEvents() {
   constexpr int MAX_EPOLL_EVENTS = 64;
   std::array<epoll_event, MAX_EPOLL_EVENTS> epoll_event_list{};
   while (true) {
@@ -180,7 +184,6 @@ void TcpServer::TryWrite(int socket_fd, const ByteArrayView& data,
 
   // Add write mask
   AddEvent(socket_fd, EPOLLIN | EPOLLET | EPOLLRDHUP | EPOLLOUT, true);
-  return;
 }
 
 void TcpServer::ContinueWrite(int socket_fd) {
