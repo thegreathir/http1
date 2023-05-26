@@ -118,11 +118,11 @@ using HeaderFields = std::vector<HeaderField>;
 class HttpMessage {
  public:
   void AddField(const HeaderField& field);
-  void SetBody(const TcpServer::ByteArray& body);
+  void SetBody(const TcpServer::ByteArrayView& body);
 
  protected:
   HeaderFields header_fields_;
-  std::optional<TcpServer::ByteArray> body_;
+  std::optional<TcpServer::ByteArrayView> body_;
 };
 
 class HttpRequest : public HttpMessage {

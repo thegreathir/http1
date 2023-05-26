@@ -165,10 +165,10 @@ bool TcpServer::TryWrite(int socket_fd, const ByteArray& data,
   }
 
   write_task_table[socket_fd].push(WriteTask{
-      .data = data,
+      .data = std::move(data),
       .written_size =
           (return_value > 0) ? static_cast<std::size_t>(return_value) : 0,
-      .callback = callback});
+      .callback = std::move(callback)});
 
   // Add write mask
   AddEvent(socket_fd, EPOLLIN | EPOLLET | EPOLLRDHUP | EPOLLOUT, true);

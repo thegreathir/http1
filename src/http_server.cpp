@@ -98,7 +98,7 @@ void HttpMessage::AddField(const HeaderField& field) {
   header_fields_.push_back(field);
 }
 
-void HttpMessage::SetBody(const TcpServer::ByteArray& body) { body_ = body; }
+void HttpMessage::SetBody(const TcpServer::ByteArrayView& body) { body_ = body; }
 
 HttpRequest HttpRequest::Parse(const TcpServer::ByteArrayView& data) {
   constexpr std::array<std::byte, 4> header_separator = {
@@ -150,8 +150,7 @@ HttpRequest HttpRequest::Parse(const TcpServer::ByteArrayView& data) {
   }
 
   if (header_end + header_separator.size() < data.size()) {
-    auto body_view = data.substr(header_end + header_separator.size());
-    result.SetBody(TcpServer::ByteArray(body_view.data(), body_view.size()));
+    result.SetBody(data.substr(header_end + header_separator.size()));
   }
 
   return result;
