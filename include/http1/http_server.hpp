@@ -36,6 +36,9 @@ class HttpSerializeError : std::invalid_argument {
 struct HeaderField {
   std::string name;
   std::string value;
+
+  static HeaderField Parse(const std::string& data);
+
 };
 
 using HeaderFields = std::vector<HeaderField>;
@@ -46,6 +49,9 @@ class HttpRequest {
   static HttpRequest Parse(const TcpServer::ByteArrayView& data);
   HttpRequest(HttpMethod method, const std::string& path,
               const std::string& version);
+  
+  void add_field(const HeaderField& field);
+  void set_body(const TcpServer::ByteArray& body);
 
  private:
   HttpMethod method_;
@@ -53,7 +59,7 @@ class HttpRequest {
   std::string version_;
 
   HeaderFields header_fields_;
-  std::optional<std::string> body_;
+  std::optional<TcpServer::ByteArray> body_;
 };
 
 std::ostream& operator<<(std::ostream& os, const HttpRequest& request);
