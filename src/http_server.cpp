@@ -2,6 +2,7 @@
 
 #include <iostream>
 #include <sstream>
+#include <tuple>
 #include <utility>
 
 using http1::HeaderField;
@@ -9,6 +10,7 @@ using http1::HttpMessage;
 using http1::HttpMethod;
 using http1::HttpParseError;
 using http1::HttpRequest;
+using http1::HttpRequestParser;
 using http1::HttpResponse;
 using http1::HttpSerializeError;
 using http1::HttpServer;
@@ -111,19 +113,7 @@ void HttpMessage::SetBody(const TcpServer::ByteArrayView& body) {
   body_ = body;
 }
 
-HttpRequest HttpRequest::Parse(const TcpServer::ByteArrayView& data) {
-  constexpr std::array<std::byte, 4> header_separator = {
-      std::byte{13}, std::byte{10}, std::byte{13}, std::byte{10}};
-
-  const std::size_t header_end =
-      data.find(header_separator.data(), 0, header_separator.size());
-  if (header_end == TcpServer::ByteArrayView::npos) {
-    throw HttpParseError("Can not find end of header");
-  }
-
-  const std::string_view header{reinterpret_cast<const char*>(data.data()),
-                                header_end};
-
+HttpRequest HttpRequest::ParseHeader(const std::string_view& header) {
   const std::size_t request_line_end = header.find("\r\n");
   if (request_line_end == std::string_view::npos) {
     throw HttpParseError("Can not parse request line");
@@ -151,27 +141,36 @@ HttpRequest HttpRequest::Parse(const TcpServer::ByteArrayView& data) {
           header.substr(path_end + 1, request_line_end - path_end - 1)));
 
   std::size_t field_start = request_line_end + 2;
-  while (field_start < header_end) {
+  while (field_start < header.size()) {
     const std::size_t field_end = header.find("\r\n", field_start);
     if (field_end == std::string_view::npos) {
-      result.AddField(HeaderField::Parse(header.substr(field_start)));
+      result.UpdateFields(HeaderField::Parse(header.substr(field_start)));
       break;
     }
-    result.AddField(HeaderField::Parse(
+    result.UpdateFields(HeaderField::Parse(
         header.substr(field_start, field_end - field_start)));
     field_start = field_end + 2;
-  }
-
-  if (header_end + header_separator.size() < data.size()) {
-    result.SetBody(data.substr(header_end + header_separator.size()));
   }
 
   return result;
 }
 
+void HttpRequest::UpdateFields(const HeaderField& field) {
+  AddField(field);
+  if (field.name == "content-length") {
+    content_length_ = std::stoi(field.value);
+  }
+
+  if (field.name == "connection" && field.value == "keep-alive") {
+    keep_alive_ = true;
+  }
+}
+
 HttpRequest::HttpRequest(HttpMethod method, std::string path,
                          std::string version)
     : method_(method), path_(std::move(path)), version_(std::move(version)) {}
+
+HttpRequest::HttpRequest() {}
 
 std::ostream& http1::operator<<(std::ostream& output_stream,
                                 const HttpRequest& request) {
@@ -186,6 +185,87 @@ std::ostream& http1::operator<<(std::ostream& output_stream,
   }
 
   return output_stream;
+}
+
+HttpRequestParser::HttpRequestParser(const RequestCallback& callback)
+    : on_request_(callback) {}
+
+void HttpRequestParser::Feed(const TcpServer::ByteArrayView& data) {
+  if (data.empty()) return;
+  switch (state_) {
+    case State::Header: {
+      static constexpr std::array<std::byte, 4> header_separator = {
+          std::byte{13}, std::byte{10}, std::byte{13}, std::byte{10}};
+
+      const std::size_t header_end =
+          data.find(header_separator.data(), 0, header_separator.size());
+      if (header_end == TcpServer::ByteArrayView::npos) {
+        buffer_.append(data);
+        if ((data[0] == header_separator[0] ||
+             data[0] == header_separator[1]) &&
+            buffer_.find(header_separator.data(), 0, header_separator.size()) !=
+                TcpServer::ByteArray::npos) {
+          TcpServer::ByteArray new_buffer;
+          std::swap(new_buffer, buffer_);
+          Feed(new_buffer);
+        }
+        return;
+      }
+
+      std::string_view header;
+      if (buffer_.empty()) {
+        header = std::string_view{reinterpret_cast<const char*>(data.data()),
+                                  header_end};
+      } else {
+        buffer_.append(data.substr(0, header_end));
+        header = std::string_view{reinterpret_cast<const char*>(buffer_.data()),
+                                  header_end};
+      }
+
+      request_ = HttpRequest::ParseHeader(header);
+      buffer_.clear();
+
+      if (request_.content_length() > 0) {
+        state_ = State::Body;
+      } else {
+        on_request_(request_);
+
+        request_ = HttpRequest{};
+        state_ = State::Header;
+      }
+
+      Feed(TcpServer::ByteArrayView(
+          data.substr(header_end + header_separator.size())));
+
+      break;
+    }
+    case State::Body: {
+      if (buffer_.size() + data.size() < request_.content_length()) {
+        buffer_.append(data);
+        return;
+      }
+
+      std::size_t consumed = 0;
+      if (buffer_.empty()) {
+        consumed = request_.content_length();
+        request_.SetBody(data.substr(0, consumed));
+      } else {
+        consumed = request_.content_length() - buffer_.size();
+        buffer_.append(data.substr(0, consumed));
+        request_.SetBody(buffer_);
+      }
+
+      on_request_(request_);
+      buffer_.clear();
+
+      request_ = HttpRequest{};
+      state_ = State::Header;
+
+      Feed(data.substr(consumed));
+
+      break;
+    }
+  }
 }
 
 void HttpResponse::SetReason(const std::string& reason) { reason_ = reason; }
@@ -222,9 +302,21 @@ TcpServer::ByteArray HttpResponse::Serialize() const {
 HttpServer::HttpServer(std::uint16_t port) : TcpServer(port){};
 
 void HttpServer::OnData(const Socket& socket, const ByteArrayView& data) {
+  auto parser_iterator = parser_table.find(socket.socket_fd());
+  if (parser_iterator == parser_table.end()) {
+    std::tie(parser_iterator, std::ignore) = parser_table.insert(std::make_pair(
+        socket.socket_fd(), [this, socket](const HttpRequest& req) {
+          if (req.keep_alive()) {
+            socket.Write(OnRequest(req).Serialize());
+          } else {
+            socket.Write(OnRequest(req).Serialize(),
+                         [socket]() { socket.Close(); });
+          }
+        }));
+  }
+
   try {
-    // TODO: Close if 'keep-alive' is not exist in request header
-    socket.Write(OnRequest(HttpRequest::Parse(data)).Serialize());
+    parser_iterator->second.Feed(data);
     return;
   } catch (const HttpParseError& parse_error) {
     std::cerr << "HTTP request parse failed: " << parse_error.what()
@@ -235,4 +327,8 @@ void HttpServer::OnData(const Socket& socket, const ByteArrayView& data) {
   }
 
   socket.Close();
+}
+
+void HttpServer::OnClose(const Socket& socket) {
+  parser_table.erase(socket.socket_fd());
 }

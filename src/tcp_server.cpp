@@ -151,6 +151,7 @@ void TcpServer::CloseSocket(int socket_fd) {
   epoll_ctl(epoll_fd_, EPOLL_CTL_DEL, socket_fd, nullptr);
   close(socket_fd);
   write_task_table.erase(socket_fd);
+  OnClose(Socket(socket_fd, *this));
 }
 
 void TcpServer::AddToCloseQueue(int socket_fd) { close_queue.push(socket_fd); }

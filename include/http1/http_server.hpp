@@ -13,6 +13,7 @@
 namespace http1 {
 
 enum class HttpMethod {
+  Unknown,
   Get,
   Head,
   Post,
@@ -137,8 +138,11 @@ class HttpMessage {
 
 class HttpRequest : public HttpMessage {
  public:
-  static HttpRequest Parse(const TcpServer::ByteArrayView& data);
+  static HttpRequest ParseHeader(const std::string_view& header);
   HttpRequest(HttpMethod method, std::string path, std::string version);
+  HttpRequest();
+
+  void UpdateFields(const HeaderField& field);
 
   [[nodiscard]] inline HttpMethod method() const noexcept { return method_; }
 
@@ -150,10 +154,43 @@ class HttpRequest : public HttpMessage {
     return version_;
   }
 
+  [[nodiscard]] inline std::size_t content_length() const noexcept {
+    return content_length_;
+  }
+
+  [[nodiscard]] inline bool keep_alive() const noexcept {
+    return keep_alive_;
+  }
+
  private:
-  HttpMethod method_;
-  std::string path_;
-  std::string version_;
+  HttpMethod method_ = HttpMethod::Unknown;
+  std::string path_ = "";
+  std::string version_ = "";
+
+  std::size_t content_length_ = 0;
+  bool keep_alive_ = false;
+};
+
+class HttpRequestParser {
+  public: 
+    using RequestCallback = std::function<void(const HttpRequest&)>;
+    explicit HttpRequestParser(const RequestCallback& callback);
+    void Feed(const TcpServer::ByteArrayView& data);
+
+    inline const HttpRequest& request() const noexcept {
+      return request_;
+    }
+
+  private:
+    enum class State {
+      Header,
+      Body
+    };
+
+    TcpServer::ByteArray buffer_;
+    State state_ = State::Header;
+    HttpRequest request_;
+    RequestCallback on_request_;
 };
 
 class HttpResponse : public HttpMessage {
@@ -183,6 +220,9 @@ class HttpServer : public TcpServer {
 
  private:
   void OnData(const Socket& socket, const ByteArrayView& data) override;
+  void OnClose(const Socket& socket) override;
+
+  std::unordered_map<int, HttpRequestParser> parser_table;
 };
 
 }  // namespace http1
