@@ -16,10 +16,12 @@ namespace http1 {
 
 class TcpServer {
  public:
+  static constexpr std::size_t DEFAULT_BUFFER_SIZE = 2048;
   using ByteArray = std::basic_string<std::byte>;
   using ByteArrayView = std::basic_string_view<std::byte>;
 
-  explicit TcpServer(std::uint16_t port, std::size_t receive_buffer_size = 2048);
+  explicit TcpServer(std::uint16_t port,
+                     std::size_t receive_buffer_size = DEFAULT_BUFFER_SIZE);
   virtual ~TcpServer();
 
   TcpServer(const TcpServer& other) = delete;

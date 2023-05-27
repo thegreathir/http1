@@ -42,6 +42,7 @@ jobs:
         -cppcoreguidelines-pro-type-vararg,
         -hicpp-vararg,
         -google-readability-todo,
+        -cppcoreguidelines-pro-type-reinterpret-cast,
         -bugprone-easily-swappable-parameters"
         --header-filter="include\/http1\/.*\.hpp"
         -p ${{github.workspace}}/build

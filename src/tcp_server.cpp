@@ -48,7 +48,6 @@ void TcpServer::Start() {
   server_address.sin_addr.s_addr = INADDR_ANY;
   server_address.sin_port = htons(port_);
 
-  // NOLINTNEXTLINE(cppcoreguidelines-pro-type-reinterpret-cast)
   wrap_syscall(bind(server_fd_, reinterpret_cast<sockaddr*>(&server_address),
                     sizeof(server_address)),
                "Can not bind server socket");
