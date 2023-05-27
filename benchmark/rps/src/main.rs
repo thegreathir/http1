@@ -6,7 +6,7 @@ fn main() {
     let n: i32 = std::env::args().nth(1).unwrap().parse().unwrap();
     thread::scope(|s| {
         let mut join_handles = Vec::new();
-        const REQ_COUNT:i32 = 100000;
+        const REQ_COUNT:i32 = 500000;
         for _t in 0..n {
             join_handles.push(s.spawn(|| {
                 let client = Client::new();
