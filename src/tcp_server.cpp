@@ -7,6 +7,7 @@
 #include <unistd.h>
 
 #include <array>
+#include <gsl/narrow>
 
 #include "syscall_wrapper.hpp"
 
@@ -194,9 +195,11 @@ void TcpServer::ContinueWrite(int socket_fd) {
   while (!task_queue.empty()) {
     auto& task = task_queue.front();
 
-    const auto return_value =
-        send(socket_fd, std::next(task.data.data(), task.written_size),
-             task.data.size() - task.written_size, 0);
+    const auto return_value = send(
+        socket_fd,
+        std::next(task.data.data(),
+                  gsl::narrow<ByteArray::difference_type>(task.written_size)),
+        task.data.size() - task.written_size, 0);
 
     if (return_value >= 0 && static_cast<std::size_t>(return_value) ==
                                  (task.data.size() - task.written_size)) {

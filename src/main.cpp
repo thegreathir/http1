@@ -1,4 +1,5 @@
 #include <fstream>
+#include <gsl/narrow>
 #include <iostream>
 #include <sstream>
 #include <string>
@@ -26,7 +27,8 @@ class ExampleHttpServer : public http1::HttpServer {
 
     ByteArray content(size, std::byte{0});
 
-    file.read(reinterpret_cast<char*>(content.data()), size);
+    file.read(reinterpret_cast<char*>(content.data()),
+              gsl::narrow<std::streamsize>(size));
     file.close();
 
     return content;

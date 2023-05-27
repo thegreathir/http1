@@ -3,6 +3,7 @@ project(http1)
 
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 
+include_directories(include)
 include_directories(include/http1)
 
 add_executable(http1-server src/main.cpp src/tcp_server.cpp src/http_server.cpp)
