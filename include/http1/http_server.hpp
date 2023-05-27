@@ -171,7 +171,8 @@ class HttpResponse : public HttpMessage {
   std::optional<std::string> reason_;
 };
 
-std::ostream& operator<<(std::ostream& output_stream, const HttpRequest& request);
+std::ostream& operator<<(std::ostream& output_stream,
+                         const HttpRequest& request);
 
 class HttpServer : public TcpServer {
  public:
