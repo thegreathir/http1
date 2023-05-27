@@ -50,7 +50,6 @@ TEST(RequestParser, SimpleGet) {
         EXPECT_EQ("/", req.path());
         EXPECT_EQ("HTTP/1.1", req.version());
         EXPECT_EQ(15, req.header_fields().size());
-        EXPECT_TRUE(req.keep_alive());
         EXPECT_EQ(0, req.content_length());
         called = true;
       });

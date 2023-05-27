@@ -158,17 +158,12 @@ class HttpRequest : public HttpMessage {
     return content_length_;
   }
 
-  [[nodiscard]] inline bool keep_alive() const noexcept {
-    return keep_alive_;
-  }
-
  private:
   HttpMethod method_ = HttpMethod::Unknown;
   std::string path_ = "";
   std::string version_ = "";
 
   std::size_t content_length_ = 0;
-  bool keep_alive_ = false;
 };
 
 class HttpRequestParser {

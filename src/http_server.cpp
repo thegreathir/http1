@@ -160,10 +160,6 @@ void HttpRequest::UpdateFields(const HeaderField& field) {
   if (field.name == "content-length") {
     content_length_ = std::stoi(field.value);
   }
-
-  if (field.name == "connection" && field.value == "keep-alive") {
-    keep_alive_ = true;
-  }
 }
 
 HttpRequest::HttpRequest(HttpMethod method, std::string path,
@@ -306,12 +302,7 @@ void HttpServer::OnData(const Socket& socket, const ByteArrayView& data) {
   if (parser_iterator == parser_table.end()) {
     std::tie(parser_iterator, std::ignore) = parser_table.insert(std::make_pair(
         socket.socket_fd(), [this, socket](const HttpRequest& req) {
-          if (req.keep_alive()) {
-            socket.Write(OnRequest(req).Serialize());
-          } else {
-            socket.Write(OnRequest(req).Serialize(),
-                         [socket]() { socket.Close(); });
-          }
+          socket.Write(OnRequest(req).Serialize());
         }));
   }
 
