@@ -124,29 +124,24 @@ bool TcpServer::AcceptNewClient() {
 }
 
 bool TcpServer::ReceiveData(int socket_fd) {
-  try {
-    const ssize_t return_value =
-        recv(socket_fd, receive_buffer.data(), BUFFER_SIZE, 0);
-    if (return_value == 0) {
-      return false;
-    }
-
-    if (return_value < 0) {
-      if (errno != EAGAIN && errno != EWOULDBLOCK) {
-        wrap_syscall(return_value, "Read error");
-      }
-      return false;
-    }
-
-    OnData(Socket(socket_fd, *this),
-           ByteArrayView(receive_buffer.data(),
-                         static_cast<std::size_t>(return_value)));
-
-    return true;
-  } catch (const std::system_error&) {
-    AddToCloseQueue(socket_fd);
+  const ssize_t return_value =
+      recv(socket_fd, receive_buffer.data(), BUFFER_SIZE, 0);
+  if (return_value == 0) {
     return false;
   }
+
+  if (return_value < 0) {
+    if (errno != EAGAIN && errno != EWOULDBLOCK) {
+      AddToCloseQueue(socket_fd);
+    }
+    return false;
+  }
+
+  OnData(Socket(socket_fd, *this),
+         ByteArrayView(receive_buffer.data(),
+                       static_cast<std::size_t>(return_value)));
+
+  return true;
 }
 
 void TcpServer::CloseSocket(int socket_fd) {
@@ -177,7 +172,7 @@ void TcpServer::TryWrite(int socket_fd, const ByteArrayView& data,
   }
 
   if (return_value < 0 && errno != EAGAIN && errno != EWOULDBLOCK) {
-    wrap_syscall(return_value, "Write error");
+    AddToCloseQueue(socket_fd);
     return;
   }
 
@@ -211,7 +206,7 @@ void TcpServer::ContinueWrite(int socket_fd) {
     }
 
     if (return_value < 0 && errno != EAGAIN && errno != EWOULDBLOCK) {
-      wrap_syscall(return_value, "Write error");
+      AddToCloseQueue(socket_fd);
       break;
     }
 
