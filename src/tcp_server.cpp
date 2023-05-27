@@ -22,7 +22,10 @@ void TcpServer::Socket::Write(const ByteArrayView& data,
 
 void TcpServer::Socket::Close() const { server_.AddToCloseQueue(socket_fd_); }
 
-TcpServer::TcpServer(std::uint16_t port) : port_(port) {}
+TcpServer::TcpServer(std::uint16_t port, std::size_t receive_buffer_size)
+    : port_(port) {
+  receive_buffer.resize(receive_buffer_size, std::byte{0});
+}
 
 TcpServer::~TcpServer() {
   close(epoll_fd_);
@@ -68,12 +71,10 @@ void TcpServer::LoopEvents() {
     for (int fd_iterator = 0; fd_iterator < number_of_fds; ++fd_iterator) {
       auto& current_event = epoll_event_list.at(fd_iterator);
       if (current_event.data.fd == server_fd_) {
-        while (AcceptNewClient()) {
-        }
+        AcceptNewClients();
       } else {
         if ((current_event.events & EPOLLIN) != 0U) {
-          while (ReceiveData(current_event.data.fd)) {
-          }
+          ReceiveData(current_event.data.fd);
         }
         if ((current_event.events & EPOLLOUT) != 0U) {
           ContinueWrite(current_event.data.fd);
@@ -91,9 +92,10 @@ void TcpServer::LoopEvents() {
 }
 
 void TcpServer::SetNonBlocking(int socket_fd) {
-  const unsigned int DEFAULT_FLAGS =
+  const int DEFAULT_FLAGS =
       wrap_syscall(fcntl(socket_fd, F_GETFL, 0), "Can not get socket flags");
 
+  // NOLINTNEXTLINE(hicpp-signed-bitwise)
   wrap_syscall(fcntl(socket_fd, F_SETFL, DEFAULT_FLAGS | O_NONBLOCK),
                "Can not enable non-blocking for socket");
 }
@@ -108,40 +110,41 @@ void TcpServer::AddEvent(int socket_fd, std::uint32_t event_flags,
                "Can not add/update socket event");
 }
 
-bool TcpServer::AcceptNewClient() {
-  const int new_client_fd = accept(server_fd_, nullptr, nullptr);
+void TcpServer::AcceptNewClients() {
+  while (true) {
+    const int new_client_fd = accept(server_fd_, nullptr, nullptr);
 
-  if (new_client_fd < 0) {
-    if (errno != EAGAIN && errno != EWOULDBLOCK) {
-      wrap_syscall(new_client_fd, "Can not accept new connection");
+    if (new_client_fd < 0) {
+      if (errno != EAGAIN && errno != EWOULDBLOCK) {
+        wrap_syscall(new_client_fd, "Can not accept new connection");
+      }
+      break;
     }
-    return false;
-  }
 
-  SetNonBlocking(new_client_fd);
-  AddEvent(new_client_fd, EPOLLIN | EPOLLET | EPOLLRDHUP);
-  return true;
+    SetNonBlocking(new_client_fd);
+    AddEvent(new_client_fd, EPOLLIN | EPOLLET | EPOLLRDHUP);
+  }
 }
 
-bool TcpServer::ReceiveData(int socket_fd) {
-  const ssize_t return_value =
-      recv(socket_fd, receive_buffer.data(), BUFFER_SIZE, 0);
-  if (return_value == 0) {
-    return false;
-  }
-
-  if (return_value < 0) {
-    if (errno != EAGAIN && errno != EWOULDBLOCK) {
-      AddToCloseQueue(socket_fd);
+void TcpServer::ReceiveData(int socket_fd) {
+  while (true) {
+    const ssize_t return_value =
+        recv(socket_fd, receive_buffer.data(), receive_buffer.size(), 0);
+    if (return_value == 0) {
+      break;
     }
-    return false;
+
+    if (return_value < 0) {
+      if (errno != EAGAIN && errno != EWOULDBLOCK) {
+        AddToCloseQueue(socket_fd);
+      }
+      break;
+    }
+
+    OnData(Socket(socket_fd, *this),
+           ByteArrayView(receive_buffer.data(),
+                         static_cast<std::size_t>(return_value)));
   }
-
-  OnData(Socket(socket_fd, *this),
-         ByteArrayView(receive_buffer.data(),
-                       static_cast<std::size_t>(return_value)));
-
-  return true;
 }
 
 void TcpServer::CloseSocket(int socket_fd) {

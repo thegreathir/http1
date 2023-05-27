@@ -41,6 +41,7 @@ jobs:
         -modernize-use-trailing-return-type,
         -cppcoreguidelines-pro-type-vararg,
         -hicpp-vararg,
+        -google-readability-todo,
         -bugprone-easily-swappable-parameters"
         --header-filter="include\/http1\/.*\.hpp"
         -p ${{github.workspace}}/build
