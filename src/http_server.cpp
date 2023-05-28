@@ -1,5 +1,6 @@
 #include "http_server.hpp"
 
+#include <gsl/narrow>
 #include <iostream>
 #include <sstream>
 #include <tuple>
@@ -201,8 +202,9 @@ void HttpRequestParser::Feed(const TcpServer::ByteArrayView& data) {
       for (std::size_t i = 0; i < 3; ++i) {
         if (data.size() > i && buffer_.size() >= (3 - i) &&
             data.substr(0, i + 1) ==
-                TcpServer::ByteArrayView(
-                    std::next(header_separator.data(), (3 - i)), i + 1) &&
+                TcpServer::ByteArrayView(std::next(header_separator.data(),
+                                                   gsl::narrow<long>(3 - i)),
+                                         i + 1) &&
             buffer_.substr(buffer_.size() - (3 - i), (3 - i)) ==
                 TcpServer::ByteArrayView(header_separator.data(), (3 - i))) {
           buffer_.append(data.substr(0, i + 1));
