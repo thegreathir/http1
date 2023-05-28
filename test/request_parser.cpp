@@ -43,6 +43,11 @@ constexpr const char* GET_REQUEST =
     "\r\n"
     "\r\n";
 
+constexpr const char* GET_REQUEST_WITHOUT_FIELDS =
+    "GET / HTTP/1.1"
+    "\r\n"
+    "\r\n";
+
 http1::HttpRequest expected_get_request() {
   auto result = http1::HttpRequest(http1::HttpMethod::Get, "/", "HTTP/1.1");
   result.UpdateFields("host", "127.0.0.1:8000");
@@ -149,6 +154,7 @@ class RequestParserTest : public testing::Test {
   std::unique_ptr<http1::HttpRequestParser> parser_;
 };
 
+// Simple GET
 TEST_F(RequestParserTest, SimpleGet) {
   expected_requests_.push_back(expected_get_request());
   Feed(GET_REQUEST);
@@ -177,6 +183,39 @@ TEST_F(RequestParserTest, SimpleGetThreeBytesPerThreeBytes) {
   EXPECT_EQ(1, expected_request_index_);
 }
 
+// Simple GET without any fields
+TEST_F(RequestParserTest, SimpleGetWithoutFields) {
+  expected_requests_.push_back(
+      http1::HttpRequest::ParseHeader(GET_REQUEST_WITHOUT_FIELDS));
+  Feed(GET_REQUEST_WITHOUT_FIELDS);
+
+  EXPECT_EQ(1, expected_request_index_);
+}
+
+TEST_F(RequestParserTest, SimpleGetWithoutFieldsBytePerByte) {
+  expected_requests_.push_back(
+      http1::HttpRequest::ParseHeader(GET_REQUEST_WITHOUT_FIELDS));
+
+  for (char byte : std::string(GET_REQUEST_WITHOUT_FIELDS)) {
+    Feed(std::string(1, byte));
+  }
+
+  EXPECT_EQ(1, expected_request_index_);
+}
+
+TEST_F(RequestParserTest, SimpleGetWithoutFieldsThreeBytesPerThreeBytes) {
+  expected_requests_.push_back(
+      http1::HttpRequest::ParseHeader(GET_REQUEST_WITHOUT_FIELDS));
+
+  for (std::size_t i = 0; i < std::strlen(GET_REQUEST_WITHOUT_FIELDS); i += 3) {
+    auto chunk = std::string(GET_REQUEST_WITHOUT_FIELDS).substr(i, 3);
+    Feed(chunk);
+  }
+
+  EXPECT_EQ(1, expected_request_index_);
+}
+
+// Simple POST
 TEST_F(RequestParserTest, SimplePost) {
   expected_requests_.push_back(expected_post_request());
   Feed(std::string(POST_REQUEST) + POST_REQUEST_BODY);
@@ -207,6 +246,7 @@ TEST_F(RequestParserTest, SimplePostBytePerByte) {
   EXPECT_EQ(1, expected_request_index_);
 }
 
+// Two consecutive requests
 TEST_F(RequestParserTest, FirstGetSecondPost) {
   expected_requests_.push_back(expected_get_request());
   expected_requests_.push_back(expected_post_request());
@@ -315,5 +355,81 @@ TEST_F(RequestParserTest, IncompleteGetThenTwoRequests) {
 
     expected_request_index_ = 0;
     expected_requests_.clear();
+  }
+}
+
+TEST_F(RequestParserTest, AllPossibleTwoChunksOfTwoRequests) {
+  std::string data =
+      std::string(GET_REQUEST) + POST_REQUEST + POST_REQUEST_BODY;
+  for (std::size_t i = 0; i < data.size(); ++i) {
+    expected_requests_.push_back(expected_get_request());
+    expected_requests_.push_back(expected_post_request());
+
+    Feed(data.substr(0, i));
+    Feed(data.substr(i));
+
+    EXPECT_EQ(2, expected_request_index_);
+
+    expected_request_index_ = 0;
+    expected_requests_.clear();
+  }
+}
+
+TEST_F(RequestParserTest, AllPossibleTwoChunksOfThreeRequests) {
+  std::string data =
+      std::string(GET_REQUEST) + POST_REQUEST + POST_REQUEST_BODY + GET_REQUEST;
+  for (std::size_t i = 0; i < data.size(); ++i) {
+    expected_requests_.push_back(expected_get_request());
+    expected_requests_.push_back(expected_post_request());
+    expected_requests_.push_back(expected_get_request());
+
+    Feed(data.substr(0, i));
+    Feed(data.substr(i));
+
+    EXPECT_EQ(3, expected_request_index_);
+
+    expected_request_index_ = 0;
+    expected_requests_.clear();
+  }
+}
+
+TEST_F(RequestParserTest, AllPossibleThreeChunksOfTwoRequests) {
+  std::string data =
+      std::string(GET_REQUEST) + POST_REQUEST + POST_REQUEST_BODY;
+  for (std::size_t i = 0; i < data.size(); ++i) {
+    for (std::size_t j = 0; j < i; ++j) {
+      expected_requests_.push_back(expected_get_request());
+      expected_requests_.push_back(expected_post_request());
+
+      Feed(data.substr(0, j));
+      Feed(data.substr(j, i - j));
+      Feed(data.substr(i));
+
+      EXPECT_EQ(2, expected_request_index_);
+
+      expected_request_index_ = 0;
+      expected_requests_.clear();
+    }
+  }
+}
+
+TEST_F(RequestParserTest, DISABLED_AllPossibleThreeChunksOfThreeRequests) {
+  std::string data =
+      std::string(GET_REQUEST) + POST_REQUEST + POST_REQUEST_BODY + GET_REQUEST;
+  for (std::size_t i = 0; i < data.size(); ++i) {
+    for (std::size_t j = 0; j < i; ++j) {
+      expected_requests_.push_back(expected_get_request());
+      expected_requests_.push_back(expected_post_request());
+      expected_requests_.push_back(expected_get_request());
+
+      Feed(data.substr(0, j));
+      Feed(data.substr(j, i - j));
+      Feed(data.substr(i));
+
+      EXPECT_EQ(3, expected_request_index_);
+
+      expected_request_index_ = 0;
+      expected_requests_.clear();
+    }
   }
 }

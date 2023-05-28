@@ -140,12 +140,8 @@ HttpRequest HttpRequest::ParseHeader(const std::string_view& header) {
           header.substr(path_end + 1, request_line_end - path_end - 1)));
 
   std::size_t field_start = request_line_end + 2;
-  while (field_start < header.size()) {
+  while (field_start < header.size() - 2) {
     const std::size_t field_end = header.find("\r\n", field_start);
-    if (field_end == std::string_view::npos) {
-      result.UpdateFields(HeaderField::Parse(header.substr(field_start)));
-      break;
-    }
     result.UpdateFields(HeaderField::Parse(
         header.substr(field_start, field_end - field_start)));
     field_start = field_end + 2;
@@ -189,86 +185,102 @@ HttpRequestParser::HttpRequestParser(RequestCallback callback)
     : on_request_(std::move(callback)) {}
 
 void HttpRequestParser::Feed(const ByteArrayView& data) {
-  if (data.empty()) {
-    return;
-  }
-  switch (state_) {
-    case State::Header: {
-      static constexpr std::array<std::byte, 4> header_separator = {
-          std::byte{13}, std::byte{10}, std::byte{13}, std::byte{10}};
+  constexpr std::byte CARRIAGE_RETURN = std::byte{13};
+  constexpr std::byte LINE_FEED = std::byte{10};
 
-      for (std::size_t i = 0; i < 3; ++i) {
-        if (data.size() > i && buffer_.size() >= (3 - i) &&
-            data.substr(0, i + 1) ==
-                ByteArrayView(std::next(header_separator.data(),
-                                        gsl::narrow<std::int64_t>(3 - i)),
-                              i + 1) &&
-            buffer_.substr(buffer_.size() - (3 - i), (3 - i)) ==
-                ByteArrayView(header_separator.data(), (3 - i))) {
-          buffer_.append(data.substr(0, i + 1));
-          ByteArray new_buffer;
-          std::swap(new_buffer, buffer_);
-          Feed(new_buffer);
-          return Feed(data.substr(i + 1));
+  bool done = false;
+  std::size_t consumed = 0;
+
+  for (std::size_t current_it = 0; current_it < data.size() && !done;) {
+    const std::byte& current = data[current_it];
+    switch (state_) {
+      case State::BeforeCr1: {
+        if (current == CARRIAGE_RETURN) {
+          state_ = State::Cr1;
         }
+        break;
       }
-
-      const std::size_t header_end =
-          data.find(header_separator.data(), 0, header_separator.size());
-      if (header_end == ByteArrayView::npos) {
-        buffer_.append(data);
-        return;
+      case State::Cr1: {
+        if (current == LINE_FEED) {
+          state_ = State::Lf1;
+        } else if (current != CARRIAGE_RETURN) {
+          state_ = State::BeforeCr1;
+        }
+        break;
       }
-
-      std::string_view header;
-      if (buffer_.empty()) {
-        header = std::string_view{reinterpret_cast<const char*>(data.data()),
-                                  header_end};
-      } else {
-        buffer_.append(data.substr(0, header_end));
-        header = std::string_view{reinterpret_cast<const char*>(buffer_.data()),
-                                  buffer_.size()};
+      case State::Lf1: {
+        if (current == CARRIAGE_RETURN) {
+          state_ = State::Cr2;
+        } else {
+          state_ = State::BeforeCr1;
+        }
+        break;
       }
+      case State::Cr2: {
+        if (current == LINE_FEED) {
+          std::string_view header;
+          if (buffer_.empty()) {
+            header = std::string_view{
+                reinterpret_cast<const char*>(std::next(
+                    data.data(), gsl::narrow<std::int64_t>(consumed))),
+                current_it + 1 - consumed};
+          } else {
+            buffer_.append(data.substr(consumed, current_it + 1 - consumed));
+            header = std::string_view{
+                reinterpret_cast<const char*>(buffer_.data()), buffer_.size()};
+          }
+          consumed = current_it + 1;
 
-      request_ = HttpRequest::ParseHeader(header);
-      buffer_.clear();
+          request_ = HttpRequest::ParseHeader(header);
+          buffer_.clear();
 
-      if (request_.content_length() > 0) {
-        state_ = State::Body;
-      } else {
+          if (request_.content_length() > 0) {
+            state_ = State::Body;
+          } else {
+            on_request_(request_);
+
+            request_ = HttpRequest{};
+            state_ = State::BeforeCr1;
+          }
+        } else if (current == CARRIAGE_RETURN) {
+          state_ = State::Cr1;
+        } else {
+          state_ = State::BeforeCr1;
+        }
+        break;
+      }
+      case State::Body: {
+        if ((data.size() - current_it) + buffer_.size() <
+            request_.content_length()) {
+          done = true;
+          break;
+        }
+
+        if (buffer_.empty()) {
+          consumed += request_.content_length();
+          request_.SetBody(data.substr(current_it, request_.content_length()));
+        } else {
+          consumed += request_.content_length() - buffer_.size();
+          buffer_.append(data.substr(
+              current_it, request_.content_length() - buffer_.size()));
+          request_.SetBody(buffer_);
+        }
+
+        current_it = consumed;
+
         on_request_(request_);
+        buffer_.clear();
 
         request_ = HttpRequest{};
-        state_ = State::Header;
-      }
+        state_ = State::BeforeCr1;
 
-      return Feed(data.substr(header_end + header_separator.size()));
+        break;
+      }
     }
-    case State::Body: {
-      if (buffer_.size() + data.size() < request_.content_length()) {
-        buffer_.append(data);
-        return;
-      }
-
-      std::size_t consumed = 0;
-      if (buffer_.empty()) {
-        consumed = request_.content_length();
-        request_.SetBody(data.substr(0, consumed));
-      } else {
-        consumed = request_.content_length() - buffer_.size();
-        buffer_.append(data.substr(0, consumed));
-        request_.SetBody(buffer_);
-      }
-
-      on_request_(request_);
-      buffer_.clear();
-
-      request_ = HttpRequest{};
-      state_ = State::Header;
-
-      return Feed(data.substr(consumed));
-    }
+    ++current_it;
   }
+
+  buffer_.append(data.substr(consumed));
 }
 
 void HttpResponse::SetReason(const std::string& reason) { reason_ = reason; }

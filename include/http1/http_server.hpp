@@ -195,10 +195,16 @@ class HttpRequestParser {
   }
 
  private:
-  enum class State { Header, Body };
+  enum class State { 
+    BeforeCr1,
+    Cr1,
+    Lf1,
+    Cr2,
+    Body
+   };
 
   ByteArray buffer_;
-  State state_ = State::Header;
+  State state_ = State::BeforeCr1;
   HttpRequest request_;
   RequestCallback on_request_;
 };
