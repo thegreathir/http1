@@ -15,7 +15,6 @@ using http1::HttpRequestParser;
 using http1::HttpResponse;
 using http1::HttpSerializeError;
 using http1::HttpServer;
-using http1::TcpServer;
 
 HttpMethod ParseMethod(const std::string_view& method) {
   if (method == "GET") {
