@@ -202,17 +202,17 @@ void HttpRequestParser::Feed(const TcpServer::ByteArrayView& data) {
       for (std::size_t i = 0; i < 3; ++i) {
         if (data.size() > i && buffer_.size() >= (3 - i) &&
             data.substr(0, i + 1) ==
-                TcpServer::ByteArrayView(std::next(header_separator.data(),
-                                                   gsl::narrow<long>(3 - i)),
-                                         i + 1) &&
+                TcpServer::ByteArrayView(
+                    std::next(header_separator.data(),
+                              gsl::narrow<std::int64_t>(3 - i)),
+                    i + 1) &&
             buffer_.substr(buffer_.size() - (3 - i), (3 - i)) ==
                 TcpServer::ByteArrayView(header_separator.data(), (3 - i))) {
           buffer_.append(data.substr(0, i + 1));
           TcpServer::ByteArray new_buffer;
           std::swap(new_buffer, buffer_);
           Feed(new_buffer);
-          Feed(data.substr(i + 1));
-          return;
+          return Feed(data.substr(i + 1));
         }
       }
 
@@ -245,9 +245,7 @@ void HttpRequestParser::Feed(const TcpServer::ByteArrayView& data) {
         state_ = State::Header;
       }
 
-      Feed(data.substr(header_end + header_separator.size()));
-
-      break;
+      return Feed(data.substr(header_end + header_separator.size()));
     }
     case State::Body: {
       if (buffer_.size() + data.size() < request_.content_length()) {
@@ -271,9 +269,7 @@ void HttpRequestParser::Feed(const TcpServer::ByteArrayView& data) {
       request_ = HttpRequest{};
       state_ = State::Header;
 
-      Feed(data.substr(consumed));
-
-      break;
+      return Feed(data.substr(consumed));
     }
   }
 }
