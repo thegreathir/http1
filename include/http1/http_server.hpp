@@ -125,20 +125,20 @@ using HeaderFields = std::vector<HeaderField>;
 class HttpMessage {
  public:
   void AddField(const HeaderField& field);
-  void SetBody(const TcpServer::ByteArrayView& body);
+  void SetBody(const ByteArrayView& body);
 
   [[nodiscard]] inline const HeaderFields& header_fields() const noexcept {
     return header_fields_;
   }
 
-  [[nodiscard]] inline const std::optional<TcpServer::ByteArrayView>& body()
+  [[nodiscard]] inline const std::optional<ByteArrayView>& body()
       const noexcept {
     return body_;
   }
 
  private:
   HeaderFields header_fields_;
-  std::optional<TcpServer::ByteArrayView> body_;
+  std::optional<ByteArrayView> body_;
 };
 
 class HttpRequest : public HttpMessage {
@@ -188,7 +188,7 @@ class HttpRequestParser {
  public:
   using RequestCallback = std::function<void(const HttpRequest&)>;
   explicit HttpRequestParser(RequestCallback callback);
-  void Feed(const TcpServer::ByteArrayView& data);
+  void Feed(const ByteArrayView& data);
 
   [[nodiscard]] inline const HttpRequest& request() const noexcept {
     return request_;
@@ -197,7 +197,7 @@ class HttpRequestParser {
  private:
   enum class State { Header, Body };
 
-  TcpServer::ByteArray buffer_;
+  ByteArray buffer_;
   State state_ = State::Header;
   HttpRequest request_;
   RequestCallback on_request_;
@@ -209,7 +209,7 @@ class HttpResponse : public HttpMessage {
 
   void SetReason(const std::string& reason);
 
-  [[nodiscard]] TcpServer::ByteArray Serialize() const;
+  [[nodiscard]] ByteArray Serialize() const;
 
  private:
   static constexpr const char* VERSION = "HTTP/1.1";

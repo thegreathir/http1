@@ -14,7 +14,7 @@ class ExampleHttpServer : public http1::HttpServer {
   }
 
  private:
-  static ByteArray open_file(const std::string& path) {
+  static http1::ByteArray open_file(const std::string& path) {
     std::ifstream file(path, std::ios::binary);
     if (!file) {
       throw std::invalid_argument("Can not open file: " + path);
@@ -25,7 +25,7 @@ class ExampleHttpServer : public http1::HttpServer {
 
     file.seekg(0, std::ios::beg);
 
-    ByteArray content(size, std::byte{0});
+    http1::ByteArray content(size, std::byte{0});
 
     file.read(reinterpret_cast<char*>(content.data()),
               gsl::narrow<std::streamsize>(size));
@@ -54,8 +54,8 @@ class ExampleHttpServer : public http1::HttpServer {
     return res;
   }
 
-  ByteArray index;
-  ByteArray background;
+  http1::ByteArray index;
+  http1::ByteArray background;
 };
 
 int main() {

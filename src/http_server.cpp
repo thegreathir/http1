@@ -110,9 +110,7 @@ void HttpMessage::AddField(const HeaderField& field) {
   header_fields_.push_back(field);
 }
 
-void HttpMessage::SetBody(const TcpServer::ByteArrayView& body) {
-  body_ = body;
-}
+void HttpMessage::SetBody(const ByteArrayView& body) { body_ = body; }
 
 HttpRequest HttpRequest::ParseHeader(const std::string_view& header) {
   const std::size_t request_line_end = header.find("\r\n");
@@ -190,7 +188,7 @@ std::ostream& http1::operator<<(std::ostream& output_stream,
 HttpRequestParser::HttpRequestParser(RequestCallback callback)
     : on_request_(std::move(callback)) {}
 
-void HttpRequestParser::Feed(const TcpServer::ByteArrayView& data) {
+void HttpRequestParser::Feed(const ByteArrayView& data) {
   if (data.empty()) {
     return;
   }
@@ -202,14 +200,13 @@ void HttpRequestParser::Feed(const TcpServer::ByteArrayView& data) {
       for (std::size_t i = 0; i < 3; ++i) {
         if (data.size() > i && buffer_.size() >= (3 - i) &&
             data.substr(0, i + 1) ==
-                TcpServer::ByteArrayView(
-                    std::next(header_separator.data(),
-                              gsl::narrow<std::int64_t>(3 - i)),
-                    i + 1) &&
+                ByteArrayView(std::next(header_separator.data(),
+                                        gsl::narrow<std::int64_t>(3 - i)),
+                              i + 1) &&
             buffer_.substr(buffer_.size() - (3 - i), (3 - i)) ==
-                TcpServer::ByteArrayView(header_separator.data(), (3 - i))) {
+                ByteArrayView(header_separator.data(), (3 - i))) {
           buffer_.append(data.substr(0, i + 1));
-          TcpServer::ByteArray new_buffer;
+          ByteArray new_buffer;
           std::swap(new_buffer, buffer_);
           Feed(new_buffer);
           return Feed(data.substr(i + 1));
@@ -218,7 +215,7 @@ void HttpRequestParser::Feed(const TcpServer::ByteArrayView& data) {
 
       const std::size_t header_end =
           data.find(header_separator.data(), 0, header_separator.size());
-      if (header_end == TcpServer::ByteArrayView::npos) {
+      if (header_end == ByteArrayView::npos) {
         buffer_.append(data);
         return;
       }
@@ -279,7 +276,7 @@ void HttpResponse::SetReason(const std::string& reason) { reason_ = reason; }
 HttpResponse::HttpResponse(HttpStatusCode status_code)
     : status_code_(status_code) {}
 
-TcpServer::ByteArray HttpResponse::Serialize() const {
+auto HttpResponse::Serialize() const -> ByteArray {
   std::stringstream header;
   header << VERSION << " " << static_cast<int>(status_code_) << " ";
   if (reason_) {
@@ -295,9 +292,8 @@ TcpServer::ByteArray HttpResponse::Serialize() const {
   header << "\r\n";
 
   const auto header_string = header.str();
-  TcpServer::ByteArray result{
-      reinterpret_cast<const std::byte*>(header_string.data()),
-      header_string.size()};
+  ByteArray result{reinterpret_cast<const std::byte*>(header_string.data()),
+                   header_string.size()};
   if (body()) {
     result.append(body().value());
   }

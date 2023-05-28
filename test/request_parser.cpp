@@ -119,7 +119,7 @@ http1::HttpRequest expected_post_request() {
   result.UpdateFields("connection", "keep-alive");
   result.UpdateFields("content-length", "119");
 
-  result.SetBody(http1::TcpServer::ByteArrayView(
+  result.SetBody(http1::ByteArrayView(
       reinterpret_cast<const std::byte*>(POST_REQUEST_BODY),
       std::strlen(POST_REQUEST_BODY)));
   return result;
@@ -138,7 +138,7 @@ class RequestParserTest : public testing::Test {
   }
 
   void Feed(const std::string& data) {
-    parser_->Feed(http1::TcpServer::ByteArrayView(
+    parser_->Feed(http1::ByteArrayView(
         reinterpret_cast<const std::byte*>(data.data()), data.size()));
   }
 

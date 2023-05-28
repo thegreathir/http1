@@ -95,12 +95,12 @@ TEST(ResponseSerializer, SimpleResponse) {
 
   response.SetReason("OK");
 
-  response.SetBody(http1::TcpServer::ByteArrayView(
+  response.SetBody(http1::ByteArrayView(
       reinterpret_cast<const std::byte*>(OK_BODY), std::strlen(OK_BODY)));
 
   std::string data = std::string(OK_RESPONSE) + OK_BODY;
 
-  EXPECT_EQ(http1::TcpServer::ByteArray(
-                reinterpret_cast<const std::byte*>(data.c_str()), data.size()),
+  EXPECT_EQ(http1::ByteArray(reinterpret_cast<const std::byte*>(data.c_str()),
+                             data.size()),
             response.Serialize());
 }
