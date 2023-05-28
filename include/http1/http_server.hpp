@@ -167,25 +167,20 @@ class HttpRequest : public HttpMessage {
 };
 
 class HttpRequestParser {
-  public: 
-    using RequestCallback = std::function<void(const HttpRequest&)>;
-    explicit HttpRequestParser(const RequestCallback& callback);
-    void Feed(const TcpServer::ByteArrayView& data);
+ public:
+  using RequestCallback = std::function<void(const HttpRequest&)>;
+  explicit HttpRequestParser(const RequestCallback& callback);
+  void Feed(const TcpServer::ByteArrayView& data);
 
-    inline const HttpRequest& request() const noexcept {
-      return request_;
-    }
+  inline const HttpRequest& request() const noexcept { return request_; }
 
-  private:
-    enum class State {
-      Header,
-      Body
-    };
+ private:
+  enum class State { Header, Body };
 
-    TcpServer::ByteArray buffer_;
-    State state_ = State::Header;
-    HttpRequest request_;
-    RequestCallback on_request_;
+  TcpServer::ByteArray buffer_;
+  State state_ = State::Header;
+  HttpRequest request_;
+  RequestCallback on_request_;
 };
 
 class HttpResponse : public HttpMessage {
