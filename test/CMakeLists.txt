@@ -16,3 +16,4 @@ function(add_test_file file_name test_name)
 endfunction()
 
 add_test_file(request_parser.cpp request-parser-test)
+add_test_file(response_serializer.cpp response-serializer-test)
