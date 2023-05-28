@@ -43,9 +43,7 @@ class TcpServer {
                const std::optional<CallBack>& callback = std::nullopt) const;
     void Close() const;
 
-    [[nodiscard]] inline int socket_fd() const noexcept {
-      return socket_fd_;
-    }
+    [[nodiscard]] inline int socket_fd() const noexcept { return socket_fd_; }
 
    private:
     Socket(int socket_fd, TcpServer& server);
