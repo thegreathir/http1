@@ -300,7 +300,6 @@ TEST_F(RequestParserTest, IncompleteGetThenPost) {
         std::string(GET_REQUEST).substr(std::strlen(GET_REQUEST) - i, i) +
         POST_REQUEST + POST_REQUEST_BODY;
 
-
     Feed(data1);
     Feed(data2);
 
@@ -322,7 +321,6 @@ TEST_F(RequestParserTest, IncompleteGetThenTwoRequests) {
     std::string data2 =
         std::string(GET_REQUEST).substr(std::strlen(GET_REQUEST) - i, i) +
         POST_REQUEST + POST_REQUEST_BODY + POST_REQUEST + POST_REQUEST_BODY;
-
 
     Feed(data1);
     Feed(data2);
