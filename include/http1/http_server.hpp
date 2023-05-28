@@ -115,6 +115,11 @@ struct HeaderField {
   static HeaderField Parse(const std::string_view& data);
 };
 
+inline bool operator==(const http1::HeaderField& lhs,
+                       const http1::HeaderField& rhs) {
+  return lhs.name == rhs.name && lhs.value == rhs.value;
+}
+
 using HeaderFields = std::vector<HeaderField>;
 
 class HttpMessage {
@@ -167,6 +172,18 @@ class HttpRequest : public HttpMessage {
   std::size_t content_length_ = 0;
 };
 
+inline bool operator==(const http1::HttpRequest& lhs,
+                       const http1::HttpRequest& rhs) {
+  return lhs.method() == rhs.method() && lhs.path() == rhs.path() &&
+         lhs.version() == rhs.version() &&
+         lhs.header_fields() == rhs.header_fields() &&
+         lhs.content_length() == rhs.content_length() &&
+         lhs.body() == rhs.body();
+}
+
+std::ostream& operator<<(std::ostream& output_stream,
+                         const HttpRequest& request);
+
 class HttpRequestParser {
  public:
   using RequestCallback = std::function<void(const HttpRequest&)>;
@@ -200,9 +217,6 @@ class HttpResponse : public HttpMessage {
   HttpStatusCode status_code_;
   std::optional<std::string> reason_;
 };
-
-std::ostream& operator<<(std::ostream& output_stream,
-                         const HttpRequest& request);
 
 class HttpServer : public TcpServer {
  public:

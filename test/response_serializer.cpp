@@ -1,3 +1,9 @@
+#include <gtest/gtest.h>
+
+#include <cstring>
+#include <string>
+
+#include "http_server.hpp"
 
 constexpr const char* OK_RESPONSE =
     "HTTP/1.1 200 OK"
@@ -19,6 +25,7 @@ constexpr const char* OK_RESPONSE =
     "Accept-Ranges: bytes"
     "\r\n"
     "\r\n";
+
 constexpr const char* OK_BODY =
     "<!DOCTYPE html>"
     "\n"
@@ -65,3 +72,35 @@ constexpr const char* OK_BODY =
     "\n"
     "</html>"
     "\n";
+
+TEST(ResponseSerializer, SimpleResponse) {
+  http1::HttpResponse response{http1::HttpStatusCode::OK};
+
+  response.AddField(
+      http1::HeaderField{.name = "Server", .value = "nginx/1.22.1"});
+  response.AddField(http1::HeaderField{
+      .name = "Date", .value = "Sun, 28 May 2023 10:57:01 GMT"});
+  response.AddField(
+      http1::HeaderField{.name = "Content-Type", .value = "text/html"});
+  response.AddField(
+      http1::HeaderField{.name = "Content-Length", .value = "615"});
+  response.AddField(http1::HeaderField{
+      .name = "Last-Modified", .value = "Tue, 01 Nov 2022 21:46:23 GMT"});
+  response.AddField(
+      http1::HeaderField{.name = "Connection", .value = "keep-alive"});
+  response.AddField(
+      http1::HeaderField{.name = "ETag", .value = "\"636193af-267\""});
+  response.AddField(
+      http1::HeaderField{.name = "Accept-Ranges", .value = "bytes"});
+
+  response.SetReason("OK");
+
+  response.SetBody(http1::TcpServer::ByteArrayView(
+      reinterpret_cast<const std::byte*>(OK_BODY), std::strlen(OK_BODY)));
+
+  std::string data = std::string(OK_RESPONSE) + OK_BODY;
+
+  EXPECT_EQ(http1::TcpServer::ByteArray(
+                reinterpret_cast<const std::byte*>(data.c_str()), data.size()),
+            response.Serialize());
+}

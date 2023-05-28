@@ -125,20 +125,6 @@ http1::HttpRequest expected_post_request() {
   return result;
 }
 
-namespace http1 {
-bool operator==(const http1::HeaderField& lhs, const http1::HeaderField& rhs) {
-  return lhs.name == rhs.name && lhs.value == rhs.value;
-}
-
-bool operator==(const http1::HttpRequest& lhs, const http1::HttpRequest& rhs) {
-  return lhs.method() == rhs.method() && lhs.path() == rhs.path() &&
-         lhs.version() == rhs.version() &&
-         lhs.header_fields() == rhs.header_fields() &&
-         lhs.content_length() == rhs.content_length() &&
-         lhs.body() == rhs.body();
-}
-}  // namespace http1
-
 class RequestParserTest : public testing::Test {
  public:
   void SetUp() override {
