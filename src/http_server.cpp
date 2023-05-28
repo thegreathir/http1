@@ -185,8 +185,8 @@ HttpRequestParser::HttpRequestParser(RequestCallback callback)
     : on_request_(std::move(callback)) {}
 
 void HttpRequestParser::Feed(const ByteArrayView& data) {
-  constexpr std::byte CARRIAGE_RETURN = std::byte{13};
-  constexpr std::byte LINE_FEED = std::byte{10};
+  constexpr auto CARRIAGE_RETURN = std::byte{13};
+  constexpr auto LINE_FEED = std::byte{10};
 
   bool done = false;
   std::size_t consumed = 0;

@@ -43,7 +43,7 @@ jobs:
         -hicpp-vararg,
         -google-readability-todo,
         -cppcoreguidelines-pro-type-reinterpret-cast,
-        -misc-no-recursion,
+        -readability-function-cognitive-complexity,
         -bugprone-easily-swappable-parameters"
         --header-filter="include\/http1\/.*\.hpp"
         -p ${{github.workspace}}/build

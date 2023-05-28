@@ -1,5 +1,5 @@
-#ifndef HTTP1_BYTE_ARRAY_H
-#define HTTP1_BYTE_ARRAY_H
+#ifndef HTTP1_BYTE_ARRAY_HPP
+#define HTTP1_BYTE_ARRAY_HPP
 
 #include <string>
 
