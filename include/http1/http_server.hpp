@@ -140,7 +140,7 @@ class HttpRequest : public HttpMessage {
  public:
   static HttpRequest ParseHeader(const std::string_view& header);
   HttpRequest(HttpMethod method, std::string path, std::string version);
-  HttpRequest();
+  HttpRequest() = default;
 
   void UpdateFields(const HeaderField& field);
 
@@ -160,8 +160,8 @@ class HttpRequest : public HttpMessage {
 
  private:
   HttpMethod method_ = HttpMethod::Unknown;
-  std::string path_ = "";
-  std::string version_ = "";
+  std::string path_;
+  std::string version_;
 
   std::size_t content_length_ = 0;
 };
@@ -169,10 +169,12 @@ class HttpRequest : public HttpMessage {
 class HttpRequestParser {
  public:
   using RequestCallback = std::function<void(const HttpRequest&)>;
-  explicit HttpRequestParser(const RequestCallback& callback);
+  explicit HttpRequestParser(RequestCallback callback);
   void Feed(const TcpServer::ByteArrayView& data);
 
-  inline const HttpRequest& request() const noexcept { return request_; }
+  [[nodiscard]] inline const HttpRequest& request() const noexcept {
+    return request_;
+  }
 
  private:
   enum class State { Header, Body };

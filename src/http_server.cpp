@@ -166,8 +166,6 @@ HttpRequest::HttpRequest(HttpMethod method, std::string path,
                          std::string version)
     : method_(method), path_(std::move(path)), version_(std::move(version)) {}
 
-HttpRequest::HttpRequest() {}
-
 std::ostream& http1::operator<<(std::ostream& output_stream,
                                 const HttpRequest& request) {
   output_stream << "Method: \"" << SerializeMethod(request.method()) << "\", "
@@ -183,11 +181,14 @@ std::ostream& http1::operator<<(std::ostream& output_stream,
   return output_stream;
 }
 
-HttpRequestParser::HttpRequestParser(const RequestCallback& callback)
-    : on_request_(callback) {}
+HttpRequestParser::HttpRequestParser(RequestCallback callback)
+    : on_request_(std::move(callback)) {}
 
+// NOLINENEXTLINE(misc-no-recursion)
 void HttpRequestParser::Feed(const TcpServer::ByteArrayView& data) {
-  if (data.empty()) return;
+  if (data.empty()) {
+    return;
+  }
   switch (state_) {
     case State::Header: {
       static constexpr std::array<std::byte, 4> header_separator = {
@@ -230,8 +231,7 @@ void HttpRequestParser::Feed(const TcpServer::ByteArrayView& data) {
         state_ = State::Header;
       }
 
-      Feed(TcpServer::ByteArrayView(
-          data.substr(header_end + header_separator.size())));
+      Feed(data.substr(header_end + header_separator.size()));
 
       break;
     }
