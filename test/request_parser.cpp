@@ -180,7 +180,7 @@ TEST_F(RequestParserTest, SimpleGetBytePerByte) {
   EXPECT_EQ(1, expected_request_index_);
 }
 
-TEST_F(RequestParserTest, SimpleGetThreeBytePerThreeByte) {
+TEST_F(RequestParserTest, SimpleGetThreeBytesPerThreeBytes) {
   expected_requests_.push_back(expected_get_request());
 
   for (std::size_t i = 0; i < std::strlen(GET_REQUEST); i += 3) {
@@ -200,7 +200,7 @@ TEST_F(RequestParserTest, SimplePost) {
   EXPECT_EQ(119, parsed_requests_.back().body().value().size());
 }
 
-TEST_F(RequestParserTest, SimplePostThreeBytePerThreeByte) {
+TEST_F(RequestParserTest, SimplePostThreeBytesPerThreeBytes) {
   expected_requests_.push_back(expected_post_request());
 
   std::string post = std::string(POST_REQUEST) + POST_REQUEST_BODY;
@@ -219,4 +219,117 @@ TEST_F(RequestParserTest, SimplePostBytePerByte) {
   }
 
   EXPECT_EQ(1, expected_request_index_);
+}
+
+TEST_F(RequestParserTest, FirstGetSecondPost) {
+  expected_requests_.push_back(expected_get_request());
+  expected_requests_.push_back(expected_post_request());
+
+  auto data = std::string(GET_REQUEST) + POST_REQUEST + POST_REQUEST_BODY;
+  Feed(data);
+
+  EXPECT_EQ(2, expected_request_index_);
+}
+
+TEST_F(RequestParserTest, FirstGetSecondPostSeparated) {
+  expected_requests_.push_back(expected_get_request());
+  expected_requests_.push_back(expected_post_request());
+
+  auto data1 = std::string(GET_REQUEST);
+  auto data2 = std::string(POST_REQUEST) + POST_REQUEST_BODY;
+  Feed(data1);
+  Feed(data2);
+
+  EXPECT_EQ(2, expected_request_index_);
+}
+
+TEST_F(RequestParserTest, FirstPostSecondGet) {
+  expected_requests_.push_back(expected_post_request());
+  expected_requests_.push_back(expected_get_request());
+
+  auto data = std::string(POST_REQUEST) + POST_REQUEST_BODY + GET_REQUEST;
+  Feed(data);
+
+  EXPECT_EQ(2, expected_request_index_);
+}
+
+TEST_F(RequestParserTest, FirstPostSecondGetSeparated) {
+  expected_requests_.push_back(expected_post_request());
+  expected_requests_.push_back(expected_get_request());
+
+  auto data1 = std::string(GET_REQUEST);
+  auto data2 = std::string(POST_REQUEST) + POST_REQUEST_BODY;
+  Feed(data2);
+  Feed(data1);
+
+  EXPECT_EQ(2, expected_request_index_);
+}
+
+TEST_F(RequestParserTest, GetAndPostThreeBytesPerThreeBytes) {
+  expected_requests_.push_back(expected_post_request());
+  expected_requests_.push_back(expected_get_request());
+
+  auto data = std::string(POST_REQUEST) + POST_REQUEST_BODY + GET_REQUEST;
+  for (std::size_t i = 0; i < data.size(); i += 3) {
+    Feed(data.substr(i, 3));
+  }
+
+  EXPECT_EQ(2, expected_request_index_);
+}
+
+TEST_F(RequestParserTest, GetAndPostBytePerByte) {
+  expected_requests_.push_back(expected_post_request());
+  expected_requests_.push_back(expected_get_request());
+
+  for (char byte :
+       std::string(POST_REQUEST) + POST_REQUEST_BODY + GET_REQUEST) {
+    Feed(std::string(1, byte));
+  }
+
+  EXPECT_EQ(2, expected_request_index_);
+}
+
+TEST_F(RequestParserTest, IncompleteGetThenPost) {
+  for (int i = 0; i < 17; ++i) {
+    expected_requests_.push_back(expected_get_request());
+    expected_requests_.push_back(expected_post_request());
+
+    std::string data1 =
+        std::string(GET_REQUEST).substr(0, std::strlen(GET_REQUEST) - i);
+    std::string data2 =
+        std::string(GET_REQUEST).substr(std::strlen(GET_REQUEST) - i, i) +
+        POST_REQUEST + POST_REQUEST_BODY;
+
+
+    Feed(data1);
+    Feed(data2);
+
+    EXPECT_EQ(2, expected_request_index_);
+
+    expected_request_index_ = 0;
+    expected_requests_.clear();
+  }
+}
+
+TEST_F(RequestParserTest, IncompleteGetThenTwoRequests) {
+  for (int i = 0; i < 17; ++i) {
+    expected_requests_.push_back(expected_get_request());
+    expected_requests_.push_back(expected_post_request());
+    expected_requests_.push_back(expected_post_request());
+
+    std::string data1 =
+        std::string(GET_REQUEST).substr(0, std::strlen(GET_REQUEST) - i);
+    std::string data2 =
+        std::string(GET_REQUEST).substr(std::strlen(GET_REQUEST) - i, i) +
+        POST_REQUEST + POST_REQUEST_BODY + POST_REQUEST + POST_REQUEST_BODY;
+
+
+    Feed(data1);
+    Feed(data2);
+
+    EXPECT_EQ(3, expected_request_index_);
+
+    expected_request_index_ = 0;
+    expected_requests_.clear();
+  }
 }

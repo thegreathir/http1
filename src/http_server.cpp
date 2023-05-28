@@ -198,18 +198,26 @@ void HttpRequestParser::Feed(const TcpServer::ByteArrayView& data) {
       static constexpr std::array<std::byte, 4> header_separator = {
           std::byte{13}, std::byte{10}, std::byte{13}, std::byte{10}};
 
+      for (std::size_t i = 0; i < 3; ++i) {
+        if (data.size() > i && buffer_.size() >= (3 - i) &&
+            data.substr(0, i + 1) ==
+                TcpServer::ByteArrayView(
+                    std::next(header_separator.data(), (3 - i)), i + 1) &&
+            buffer_.substr(buffer_.size() - (3 - i), (3 - i)) ==
+                TcpServer::ByteArrayView(header_separator.data(), (3 - i))) {
+          buffer_.append(data.substr(0, i + 1));
+          TcpServer::ByteArray new_buffer;
+          std::swap(new_buffer, buffer_);
+          Feed(new_buffer);
+          Feed(data.substr(i + 1));
+          return;
+        }
+      }
+
       const std::size_t header_end =
           data.find(header_separator.data(), 0, header_separator.size());
       if (header_end == TcpServer::ByteArrayView::npos) {
         buffer_.append(data);
-        if ((data[0] == header_separator[0] ||
-             data[0] == header_separator[1]) &&
-            buffer_.find(header_separator.data(), 0, header_separator.size()) !=
-                TcpServer::ByteArray::npos) {
-          TcpServer::ByteArray new_buffer;
-          std::swap(new_buffer, buffer_);
-          Feed(new_buffer);
-        }
         return;
       }
 
@@ -220,7 +228,7 @@ void HttpRequestParser::Feed(const TcpServer::ByteArrayView& data) {
       } else {
         buffer_.append(data.substr(0, header_end));
         header = std::string_view{reinterpret_cast<const char*>(buffer_.data()),
-                                  header_end};
+                                  buffer_.size()};
       }
 
       request_ = HttpRequest::ParseHeader(header);
