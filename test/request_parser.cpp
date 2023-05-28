@@ -41,6 +41,8 @@ constexpr const char* GET_REQUEST =
     "Accept-Language: en-US,en;q=0.9"
     "\r\n"
     "\r\n";
+  
+class
 
 TEST(RequestParser, SimpleGet) {
   bool called = false;
