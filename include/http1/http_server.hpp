@@ -143,6 +143,7 @@ class HttpRequest : public HttpMessage {
   HttpRequest() = default;
 
   void UpdateFields(const HeaderField& field);
+  void UpdateFields(const std::string& name, const std::string& value);
 
   [[nodiscard]] inline HttpMethod method() const noexcept { return method_; }
 

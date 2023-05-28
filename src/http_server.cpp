@@ -162,6 +162,11 @@ void HttpRequest::UpdateFields(const HeaderField& field) {
   }
 }
 
+void HttpRequest::UpdateFields(const std::string& name,
+                               const std::string& value) {
+  UpdateFields(HeaderField{.name = name, .value = value});
+}
+
 HttpRequest::HttpRequest(HttpMethod method, std::string path,
                          std::string version)
     : method_(method), path_(std::move(path)), version_(std::move(version)) {}
