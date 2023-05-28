@@ -184,8 +184,8 @@ std::ostream& http1::operator<<(std::ostream& output_stream,
 HttpRequestParser::HttpRequestParser(RequestCallback callback)
     : on_request_(std::move(callback)) {}
 
-// NOLINENEXTLINE(misc-no-recursion)
-void HttpRequestParser::Feed(const TcpServer::ByteArrayView& data) {
+void HttpRequestParser::Feed(
+    const TcpServer::ByteArrayView& data) {  // NOLINT(misc-no-recursion)
   if (data.empty()) {
     return;
   }
