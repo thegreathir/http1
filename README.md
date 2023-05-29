@@ -22,7 +22,7 @@ In a non-blocking environment it is not possible to wait for tasks to be complet
 
 ### HTTP stream parser
 
-TCP is a stream-based protocol so there is no assumption on received data chunk size. For parsing HTTP/1.1 requests under these conditions a DFA is designed to parse HTTP/1.1 request header and body.
+TCP is a stream-based protocol so there is no assumption on received data chunk size. For parsing HTTP/1.1 requests under these conditions a DFA is designed to parse request header and body.
 
 #### Limitations
 * Request body will be parsed only if the header contains `content-length` field so `Transfer-Encoding: chunked` is not supported.
