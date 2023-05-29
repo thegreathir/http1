@@ -97,7 +97,7 @@ All experiments are executed on two back-to-back connected laptops with a LAN ca
 
 ![users](docs/images/users10000.png)
 ![rps](docs/images/rps10000.png)
-![rt](docs/images/rt10000.png)
+![response time](docs/images/rt10000.png)
 
 Tests are executed with 10,000 connections so the kernel open file descriptors limit has been increased.
 ```bash
