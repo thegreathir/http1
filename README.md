@@ -52,7 +52,7 @@ Then "http://127.0.0.1:8000" is available in browsers.
 Benchmarks have been measured in two separated experiments.
 
 ### Total requests per second
-For measuring server's maximum requests per second rate, A [Rust](https://www.rust-lang.org/) tester program is implemented using [reqwest](https://github.com/seanmonstar/reqwest) library. The Rust language is chosen because existing of reqwest library and the blazing fast runtime performance.
+For measuring server's maximum requests per second rate, A [Rust](https://www.rust-lang.org/)y tester program is implemented using [reqwest](https://github.com/seanmonstar/reqwest) library. The Rust language is chosen because existing of reqwest library and the blazing fast runtime performance.
 
 #### Multi-threaded
 The Rust client is multi-threaded and the number of threads is configurable.
