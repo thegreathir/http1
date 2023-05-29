@@ -15,17 +15,16 @@ Basic HTTP/1.1 implemetation in C++
 
 ### TCP server architecture
 
-TCP server is implemented by [epoll](https://man7.org/linux/man-pages/man7/epoll.7.html) using edge-triggered mode. This mechanism is capable to handle too many concurrent connections (as many as kernel file descriptors limit) in a single-threaded application.
+The TCP server is implemented using [epoll](https://man7.org/linux/man-pages/man7/epoll.7.html) in edge-triggered mode. This mechanism is capable of handling a large number of concurrent connections (up to the kernel's file descriptor limit) within a single-threaded application.
 
 ### Write API
-In a non-blocking environment it is not possible to wait for tasks to be completed. So the `write` API of the implemented TCP server will get a callback argument and call it when the write task is completed. This mechanism is able to write a large chunk of data.
+In a non-blocking environment, it's not possible to wait for tasks to complete. Therefore, the write API of the implemented TCP server includes a callback argument, which it will invoke once the write task is finished. This mechanism enables the writing of large data chunks.
 
 ### HTTP stream parser
-
-TCP is a stream-based protocol so there is no assumption on received data chunk size. For parsing HTTP/1.1 requests under these conditions a DFA is designed to parse request header and body.
+TCP is a stream-based protocol, and thus there are no assumptions about the size of received data chunks. To parse HTTP/1.1 requests under these conditions, a Deterministic Finite Automaton (DFA) has been designed to parse both the request header and body.
 
 #### Limitations
-* Request body will be parsed only if the header contains `content-length` field so `Transfer-Encoding: chunked` is not supported.
+* The request body will be parsed only if the header contains a `content-length` field, implying that `Transfer-Encoding: chunked` is not supported.
 
 #### Parser DFA
 ![dfa](docs/images/http_parser_dfa.jpg)
@@ -35,7 +34,7 @@ TCP is a stream-based protocol so there is no assumption on received data chunk 
 
 ## Tests
 
-Tests for HTTP parser and serializer are available in `test` folder. HTTP stream parser is tested against edge cases.
+Tests for the HTTP parser and serializer can be found in the `test` folder. The HTTP stream parser has been tested against various edge cases.
 
 ## Demo
 An example server will be run by executing following commands.
@@ -52,7 +51,7 @@ Then "http://127.0.0.1:8000" is available in browsers.
 Benchmarks have been measured in two separated experiments.
 
 ### Total requests per second
-For measuring server's maximum requests per second rate, A [Rust](https://www.rust-lang.org/)y tester program is implemented using [reqwest](https://github.com/seanmonstar/reqwest) library. The Rust language is chosen because existing of reqwest library and the blazing fast runtime performance.
+For measuring server's maximum requests per second rate, A [Rust](https://www.rust-lang.org/)y tester program is implemented using [reqwest](https://github.com/seanmonstar/reqwest) library. The Rust language was chosen due to the availability of reqwest library and the blazing fast runtime performance.
 
 #### Multi-threaded
 The Rust client is multi-threaded and the number of threads is configurable.
@@ -76,7 +75,7 @@ Following experiments are executed on a PC with [Intel® Core™ i5-10210U Proce
 * `n` is number of client's threads
 
 ### Concurrent connections
-Project [locust](https://locust.io/) is used for load testing the HTTP server. The locust file is available in `benchmark/load`
+Project [locust](https://locust.io/) is used for load-testing the HTTP server. The locust file is available in `benchmark/load`
 
 #### Executions
 ```bash
@@ -90,7 +89,7 @@ Then the address "http://0.0.0.0:8089" is available. For more information see [l
 
 #### Results
 
-All experiments are executed on two back-to-back connected laptops with a LAN cable.
+All experiments are executed on two directly connected laptops with a LAN cable.
 
 * Server: [Intel® Core™ i7-6500U Processor](https://www.intel.com/content/www/us/en/products/sku/88194/intel-core-i76500u-processor-4m-cache-up-to-3-10-ghz/specifications.html) with 16GB RAM
 * Client: [Apple M1 chip](https://support.apple.com/kb/SP824?locale=en_US) with 8GB RAM
@@ -99,7 +98,8 @@ All experiments are executed on two back-to-back connected laptops with a LAN ca
 ![rps](docs/images/rps10000.png)
 ![response time](docs/images/rt10000.png)
 
-Tests are executed with 10,000 connections so the kernel open file descriptors limit has been increased.
+Tests were executed using 10,000 connections, requiring an increase in the kernel's open file descriptors limit.
+
 ```bash
 ulimit -n 16384
 ```
