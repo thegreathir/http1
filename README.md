@@ -38,7 +38,7 @@ TCP is a stream-based protocol so there is no assumption on received data chunk 
 Tests for HTTP parser and serializer are available in `test` folder. HTTP stream parser is tested against edge cases.
 
 ## Demo
-An example server will be ran by executing following commands.
+An example server will be run by executing following commands.
 ```bash
 mkdir build
 cd build
