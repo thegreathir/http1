@@ -413,7 +413,7 @@ TEST_F(RequestParserTest, AllPossibleThreeChunksOfTwoRequests) {
   }
 }
 
-TEST_F(RequestParserTest, DISABLED_AllPossibleThreeChunksOfThreeRequests) {
+TEST_F(RequestParserTest, AllPossibleThreeChunksOfThreeRequests) {
   std::string data =
       std::string(GET_REQUEST) + POST_REQUEST + POST_REQUEST_BODY + GET_REQUEST;
   for (std::size_t i = 0; i < data.size(); ++i) {
