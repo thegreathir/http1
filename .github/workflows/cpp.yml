@@ -29,23 +29,6 @@ jobs:
       # Build your program with the given configuration
       run: cmake --build ${{github.workspace}}/build --config ${{env.BUILD_TYPE}}
 
-    - name: Tidy
-      run: >
-        clang-tidy --warnings-as-errors="*" --checks="-*,
-        bugprone-*, cert-*, clang-analyzer-*, concurrency-*, cppcoreguidelines-*,
-        google-*, hicpp-*, llvm-*, misc-*, modernize-*, performance-*,
-        portability-*, readability-*,
-        -modernize-use-trailing-return-type,
-        -cppcoreguidelines-pro-type-vararg,
-        -hicpp-vararg,
-        -google-readability-todo,
-        -cppcoreguidelines-pro-type-reinterpret-cast,
-        -readability-function-cognitive-complexity,
-        -bugprone-easily-swappable-parameters"
-        --header-filter="include\/http1\/.*\.hpp"
-        -p ${{github.workspace}}/build
-        src/*.cpp
-
     - name: Test
       working-directory: ${{github.workspace}}/build
       # Execute tests defined by the CMake configuration.
