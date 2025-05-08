@@ -312,7 +312,7 @@ auto HttpResponse::Serialize() const -> ByteArray {
   return result;
 }
 
-HttpServer::HttpServer(std::uint16_t port) : TcpServer(port){};
+HttpServer::HttpServer(std::uint16_t port) : TcpServer(port) {};
 
 void HttpServer::OnData(const Socket& socket, const ByteArrayView& data) {
   auto parser_iterator = parser_table.find(socket.socket_fd());
